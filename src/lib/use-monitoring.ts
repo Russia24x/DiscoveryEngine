@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useApp } from "@/lib/store";
 import { useAlerts } from "@/lib/alerts-store";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ export function useMonitoring() {
   const { rules, triggerAlert } = useAlerts();
   const prevResultsRef = useRef<Map<string, any>>(new Map());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const configRef = useRef<MonitoringConfig>(loadConfig());
+  const [config, setConfigState] = useState<MonitoringConfig>(loadConfig);
 
   const runScan = useCallback(async () => {
     setScanning(true);
@@ -143,8 +143,9 @@ export function useMonitoring() {
     timerRef.current = setInterval(() => {
       runScan();
     }, safeInterval * 1000);
-    configRef.current = { enabled: true, intervalSec: safeInterval };
-    saveConfig(configRef.current);
+    const newConfig = { enabled: true, intervalSec: safeInterval };
+    setConfigState(newConfig);
+    saveConfig(newConfig);
   }, [runScan]);
 
   const stop = useCallback(() => {
@@ -152,8 +153,11 @@ export function useMonitoring() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    configRef.current = { ...configRef.current, enabled: false };
-    saveConfig(configRef.current);
+    setConfigState((prev) => {
+      const newConfig = { ...prev, enabled: false };
+      saveConfig(newConfig);
+      return newConfig;
+    });
   }, []);
 
   const setConfig = useCallback((enabled: boolean, intervalSec: number) => {
@@ -177,5 +181,5 @@ export function useMonitoring() {
     };
   }, [start]);
 
-  return { config: configRef.current, setConfig, runScan };
+  return { config, setConfig, runScan };
 }

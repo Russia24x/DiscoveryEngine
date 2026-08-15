@@ -17,6 +17,7 @@ export interface ProjectInput {
   fdv?: number;
   totalSupply?: number;
   floatSupply?: number; // circulating supply
+  priceChange90d?: number; // % price change over 90 days
   // ── Value Accrual Chain (annual, USD) ──
   gea?: number; // Gross Economic Activity
   pr?: number; // Protocol Revenue

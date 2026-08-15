@@ -42,18 +42,22 @@ export function computeVA(input: ProjectInput): number {
 
 // V = 0.25·(1−MC/TC_n) + 0.25·(1−MC/PR_n) + 0.20·TY + 0.15·(1−FDV/TC_n) + 0.15·IG
 // where TC_n, PR_n are annualized captures in USD.
+// The ratios MC/TC and MC/PR are P/E-style multiples. We normalize them so
+// that a "fair" multiple maps to ~50/100 on the 0-100 scale. A project with
+// MC/TC = 10 (10x P/E) → ~50, MC/TC = 5 → ~75, MC/TC = 50 → ~15.
 export function computeV(input: ProjectInput): number {
   const mc = input.marketCap ?? 0;
   const pr = input.pr ?? 0;
   const tc = input.tc ?? 0;
   const fdv = input.fdv ?? 0;
 
-  // MC/TC_n: market cap vs annual tokenholder capture → lower = cheaper
-  const mcTc = tc > 0 ? clamp(1 - mc / (tc * 1), 0, 100) : 0; // P/earnings-style
-  // MC/PR_n
-  const mcPr = pr > 0 ? clamp(1 - mc / (pr * 1), 0, 100) : 0;
-  // FDV/TC_n
-  const fdvTc = tc > 0 ? clamp(1 - fdv / (tc * 1), 0, 100) : 0;
+  // Normalize P/E-style ratio: ratio=10 → 50, ratio=5 → 75, ratio=20 → 25.
+  // Formula: score = clamp(100 - ratio * 5, 0, 100)
+  // For very high ratios (mc >> tc), the score correctly approaches 0 (overvalued).
+  // For projects with no tokenholder capture (tc=0), score is 0.
+  const mcTc = tc > 0 ? clamp(100 - (mc / tc) * 5, 0, 100) : 0;
+  const mcPr = pr > 0 ? clamp(100 - (mc / pr) * 5, 0, 100) : 0;
+  const fdvTc = tc > 0 ? clamp(100 - (fdv / tc) * 5, 0, 100) : 0;
 
   const ty = input.tokenYield ?? 0;
   const ig = input.incentiveGravity ?? 0;

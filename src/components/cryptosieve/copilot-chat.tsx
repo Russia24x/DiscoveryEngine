@@ -30,6 +30,17 @@ export function CopilotChat({ symbol }: { symbol: string }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight stream on unmount.
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,6 +55,11 @@ export function CopilotChat({ symbol }: { symbol: string }) {
     setInput("");
     setLoading(true);
 
+    // Abort any previous in-flight request.
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     // Add an empty assistant message that we'll stream into.
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
@@ -53,6 +69,7 @@ export function CopilotChat({ symbol }: { symbol: string }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ symbol, question }),
+        signal: controller.signal,
       });
 
       if (res.ok && res.headers.get("content-type")?.includes("text/event-stream")) {
@@ -110,6 +127,7 @@ export function CopilotChat({ symbol }: { symbol: string }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ symbol, question }),
+        signal: controller.signal,
       });
       const j = await fallbackRes.json();
       if (j.ok) {

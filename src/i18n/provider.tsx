@@ -58,8 +58,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Lazy-init from localStorage (SSR returns defaults; suppressHydrationWarning handles mismatch).
   const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+  // Track system theme preference so resolvedTheme is reactive in system mode.
+  const [systemPrefDark, setSystemPrefDark] = useState<boolean>(() => systemTheme() === "dark");
 
-  const resolvedTheme: "light" | "dark" = theme === "system" ? systemTheme() : theme;
+  const resolvedTheme: "light" | "dark" =
+    theme === "system" ? (systemPrefDark ? "dark" : "light") : theme;
 
   // DOM sync — no setState here, just external system writes.
   useEffect(() => {
@@ -74,17 +77,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     else root.classList.remove("dark");
   }, [resolvedTheme]);
 
+  // Listen for system theme changes — update state so resolvedTheme is reactive.
   useEffect(() => {
-    if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      const root = document.documentElement;
-      if (mq.matches) root.classList.add("dark");
-      else root.classList.remove("dark");
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemPrefDark(e.matches);
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);

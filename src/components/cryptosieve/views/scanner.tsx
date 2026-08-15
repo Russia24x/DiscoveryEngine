@@ -333,8 +333,17 @@ export function ScannerView() {
                   <tr
                     key={p.symbol}
                     onClick={() => openProject(p.symbol)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openProject(p.symbol);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Open ${p.symbol} detail`}
                     className={cn(
-                      "border-t border-border hover:bg-muted/40 cursor-pointer transition-colors group",
+                      "border-t border-border hover:bg-muted/40 cursor-pointer transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                       density === "compact" && "hover:bg-muted/30"
                     )}
                   >

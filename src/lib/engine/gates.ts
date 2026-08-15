@@ -46,7 +46,7 @@ export function evaluateGates(input: ProjectInput): {
       passed: input.buybackThesis
         ? (supply.sar == null ? false : supply.sar >= 0.1)
         : true,
-      conditional: input.buybackThesis,
+      conditional: input.buybackThesis ?? false,
       value: supply.sar ?? 0,
       threshold: 0.1,
       description: "Supply absorption too low (conditional on buyback thesis)",

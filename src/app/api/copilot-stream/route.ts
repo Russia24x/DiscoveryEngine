@@ -1,7 +1,6 @@
 // POST /api/copilot-stream — streaming AI Research Copilot using SSE.
 import { collectUniverse } from "@/lib/datasources/registry";
 import {
-  benchmarkUniverse,
   buildCatalystReport,
   buildCapitalFlowProfile,
   buildEvidenceGraph,
@@ -83,7 +82,7 @@ Answer based strictly on the provided context.`;
 
           const completion = await zai.chat.completions.create({
             messages: [
-              { role: "assistant", content: systemPrompt },
+              { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt },
             ],
             thinking: { type: "disabled" },

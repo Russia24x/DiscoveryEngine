@@ -77,7 +77,7 @@ export function DashboardView() {
     }
   }
 
-  const M = data ? 1 + 0 : 1; // market regime from scan meta; default neutral
+  // Market regime M value — displayed in the UI (default 1.000 = neutral).
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">

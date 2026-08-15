@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useI18n } from "@/i18n/provider";
 import { useApp } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,9 +76,10 @@ export function CompareView() {
     };
   }, [scanResults]);
 
-  // Default-select top 3 once available projects are loaded.
+  // Default-select top 3 once available projects are loaded (only if user hasn't interacted).
+  const userInteractedRef = useRef(false);
   useEffect(() => {
-    if (available.length > 0 && selected.length === 0) {
+    if (available.length > 0 && selected.length === 0 && !userInteractedRef.current) {
       const top3 = [...available]
         .sort((a, b) => (b.iaFinal ?? 0) - (a.iaFinal ?? 0))
         .slice(0, 3)
@@ -111,14 +112,19 @@ export function CompareView() {
   }
 
   function toggleSymbol(sym: string) {
+    userInteractedRef.current = true;
     setSelected((prev) => {
       if (prev.includes(sym)) return prev.filter((s) => s !== sym);
-      if (prev.length >= 4) {
-        toast.error("Max 4 projects");
-        return prev;
-      }
-      return [...prev, sym];
+      return prev;
     });
+    // Check max outside the updater to avoid double-calling in StrictMode.
+    if (!selected.includes(sym) && selected.length >= 4) {
+      toast.error("Max 4 projects");
+      return;
+    }
+    if (!selected.includes(sym)) {
+      setSelected((prev) => [...prev, sym]);
+    }
   }
 
   // `available` is now a state variable fetched above.

@@ -139,7 +139,7 @@ Answer based strictly on the provided context. If the answer isn't in the contex
 
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: "assistant", content: systemPrompt },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       thinking: { type: "disabled" },

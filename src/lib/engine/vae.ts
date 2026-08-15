@@ -20,12 +20,15 @@ export function computeVaeChain(input: ProjectInput): VaeChain {
 }
 
 export function computeSupplyMetrics(input: ProjectInput): SupplyMetrics {
-  const { buybackBurnAnnual, unlockEmission12m, floatSupply } = input;
-  const denom = unlockEmission12m ?? 0;
-  const numer = buybackBurnAnnual ?? 0;
+  const { buybackBurnAnnual, unlockEmission12m, floatSupply, priceUsd } = input;
+  const denom = unlockEmission12m ?? 0; // USD
+  const numer = buybackBurnAnnual ?? 0;  // USD
   const sar = denom > 0 ? numer / denom : null;
   const nsp = denom - numer;
-  const fdr = floatSupply && floatSupply > 0 ? denom / floatSupply : null;
+  // FDR = (12m unlock in tokens) / (current float in tokens).
+  // unlockEmission12m is in USD, so convert to tokens via priceUsd.
+  const unlockTokens = priceUsd && priceUsd > 0 ? denom / priceUsd : (floatSupply && floatSupply > 0 ? denom : 0);
+  const fdr = floatSupply && floatSupply > 0 ? unlockTokens / floatSupply : null;
   return {
     sar,
     nsp: nsp === 0 && denom === 0 ? null : nsp,

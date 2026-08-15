@@ -94,13 +94,17 @@ export function buildCapitalFlowProfile(input: ProjectInput): CapitalFlowProfile
     : 0;
   const exchangeBase = (input.marketLiquidity ?? 50) - 50 + unlockPressure;
   const exchangeSignal = clampN(exchangeBase + (rng() - 0.5) * 25);
+  // exchangeSignal > 10 means coins leaving exchanges (bullish).
+  // Per interface: inflow = bullish, outflow = bearish. So "coins leaving
+  // exchanges" maps to direction "inflow" (bullish for the token).
+  const exchangeDir: SignalDirection =
+    exchangeSignal > 10 ? "inflow" : exchangeSignal < -10 ? "outflow" : "neutral";
   signals.push({
     id: "cap_exchange",
     type: "exchange_flow",
     label: "Exchange Flow",
-    direction: exchangeSignal > 10 ? "outflow" : exchangeSignal < -10 ? "inflow" : "neutral",
-    // Note: exchange OUTFLOW is bullish (coins leaving exchanges = not for sale)
-    signal: -exchangeSignal, // invert so outflow = positive
+    direction: exchangeDir,
+    signal: exchangeSignal, // positive = bullish (coins leaving exchanges)
     strength: Math.min(100, Math.abs(exchangeSignal) * 1.4),
     description: exchangeSignal > 10
       ? "Coins leaving exchanges — accumulation mode"
@@ -112,14 +116,17 @@ export function buildCapitalFlowProfile(input: ProjectInput): CapitalFlowProfile
 
   // 4) Insider Concentration — proxy: insiderConcentration field (inverse).
   const ic = input.insiderConcentration ?? 50;
+  // insiderSignal: positive = well-distributed (bullish), negative = concentrated (bearish)
   const insiderSignal = clampN(50 - ic + (rng() - 0.5) * 20);
+  const insiderDir: SignalDirection =
+    insiderSignal > 15 ? "inflow" : insiderSignal < -15 ? "outflow" : "neutral";
   signals.push({
     id: "cap_insider",
     type: "insider_concentration",
     label: "Insider Concentration",
-    direction: insiderSignal > 15 ? "outflow" : insiderSignal < -15 ? "inflow" : "neutral",
-    // High insider concentration = bearish (dump risk)
-    signal: -insiderSignal > 0 ? -Math.abs(ic - 50) : Math.abs(ic - 50),
+    direction: insiderDir,
+    // High insider concentration = bearish (dump risk) → negative signal
+    signal: insiderSignal,
     strength: Math.min(100, Math.abs(ic - 50) * 2),
     description: ic >= 70
       ? "High insider concentration — dump risk elevated"

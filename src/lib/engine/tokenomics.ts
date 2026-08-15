@@ -85,7 +85,9 @@ export function buildTokenomicsSchedule(input: ProjectInput): TokenomicsSchedule
     const netPressure = monthUnlock + monthEmission - monthBuyback;
     const netPctOfFloat = floatSupply > 0 && priceUsd > 0 ? (netPressure / (floatSupply * priceUsd)) * 100 : 0;
     cumulativeDilution += monthUnlock + monthEmission;
-    const dilutionPct = floatSupply > 0 ? (cumulativeDilution / floatSupply) * 100 : 0;
+    // cumulativeDilution is in USD; convert to tokens via priceUsd for the ratio.
+    const dilutionTokens = priceUsd && priceUsd > 0 ? cumulativeDilution / priceUsd : 0;
+    const dilutionPct = floatSupply > 0 && dilutionTokens > 0 ? (dilutionTokens / floatSupply) * 100 : 0;
 
     const date = new Date(now.getFullYear(), now.getMonth() + m + 1, 1);
     const pressureLevel: UnlockEvent["pressureLevel"] =
@@ -116,7 +118,9 @@ export function buildTokenomicsSchedule(input: ProjectInput): TokenomicsSchedule
   );
 
   const projectedFloat12m = floatSupply + (annualUnlock / (priceUsd || 1));
-  const dilution12mPct = floatSupply > 0 ? (annualUnlock / floatSupply) * 100 : 0;
+  // annualUnlock is USD; convert to tokens for the dilution percentage.
+  const dilution12mTokens = priceUsd && priceUsd > 0 ? annualUnlock / priceUsd : 0;
+  const dilution12mPct = floatSupply > 0 && dilution12mTokens > 0 ? (dilution12mTokens / floatSupply) * 100 : 0;
   const absorptionRatio = annualUnlock > 0 ? annualBuyback / annualUnlock : 0;
   const monthlyAvgPressure =
     events.reduce((a, e) => a + e.netPressurePctOfFloat, 0) / events.length;

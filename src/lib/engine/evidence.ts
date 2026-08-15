@@ -244,7 +244,16 @@ export function buildEvidenceGraph(input: ProjectInput, scores: Scores): Evidenc
   }
 
   // ── Metric nodes (current + historical + percentile) ──
-  const hist = generateHistoricalScores(input.symbol, scores.components);
+  const hist = generateHistoricalScores(input.symbol, {
+    pq: scores.components.pq,
+    tq: scores.components.tq,
+    va: scores.components.va,
+    v: scores.components.v,
+    r: scores.components.r,
+    iaRaw: scores.iaRaw,
+    iaEffective: scores.iaEffective,
+    iaFinal: scores.iaFinal,
+  });
   metrics.push({
     key: "pq",
     label: "Project Quality",

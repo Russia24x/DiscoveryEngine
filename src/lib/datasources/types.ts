@@ -59,6 +59,7 @@ export function toProjectInput(m: MarketDataRow, f?: FundamentalsRow): ProjectIn
     fdv: m.fdv,
     totalSupply: m.totalSupply,
     floatSupply: m.floatSupply,
+    priceChange90d: m.priceChange90d,
     gea: f?.feesAnnual,
     pr: f?.revenueAnnual ?? f?.feesAnnual,
     pc: f?.protocolCapture,

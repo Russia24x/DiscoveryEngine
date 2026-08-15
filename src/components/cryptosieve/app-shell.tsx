@@ -150,7 +150,7 @@ export function AppShell() {
                 )}
               >
                 <item.icon className="h-3.5 w-3.5" />
-                {(t.nav as any)[item.key.replace("framework", "framework")]}
+                {(t.nav as any)[item.key]}
               </button>
             ))}
           </nav>
