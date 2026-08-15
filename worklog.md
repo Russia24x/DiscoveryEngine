@@ -237,3 +237,35 @@ Priority Next:
 - Persist historical scores per scan for real trend tracking
 - Add more data sources (CoinMarketCap key-based)
 - Export/import portfolio data
+
+---
+
+Task ID: 7
+Agent: main (cron webDevReview)
+Task: QA testing + Alerts/notifications system + export/import data backup
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 10 views rendering correctly. No console errors.
+- Alerts/Notifications System:
+  - New store `src/lib/alerts-store.ts`: zustand + localStorage persistence. AlertRule (type, symbol, condition, threshold, severity, enabled) + TriggeredAlert (with read state). CRUD operations.
+  - New component `AlertsBell`: bell icon in header with unread badge count, dropdown showing recent triggered alerts with severity icons (critical/warn/info), mark all read + clear buttons.
+  - New component `AlertsManager`: full alerts management view with rule creation form (type, symbol, threshold, severity), rule list with toggle/remove, demo alerts button.
+  - 5 alert types: score_threshold, thesis_change, gate_breach, price_target, decision_change.
+- Export/Import Data Backup:
+  - New module `src/lib/data-io.ts`: exportAllData() bundles watchlist + portfolio + alert rules into versioned JSON. downloadJson() + importAllData() with deduplication.
+  - Settings page: added Data Management card with Export Backup + Import Backup buttons.
+- Navigation: added Alerts to nav (en + fa RTL). App now has 11 views.
+- i18n: added nav.alerts key (en + fa RTL).
+- Lint clean (0 errors). Committed + pushed (4620e56).
+
+Stage Summary:
+- App now has 11 views: Dashboard, Scanner, Project, Compare, Heatmap, Portfolio, Alerts, Data Sources, News & Social, Settings, Framework.
+- Verified: alerts view shows "Alerts & Notifications" heading + Demo/New rule buttons + empty rules state, bell icon in header with badge, demo alerts trigger correctly, settings shows Data Management with Export/Import buttons. No browser errors.
+
+Priority Next:
+- Continuous Monitoring: auto-scan on interval + auto-trigger alerts
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Persist historical scores per scan for real trend tracking
+- Add more data sources (CoinMarketCap key-based)
+- Mobile responsive refinements
