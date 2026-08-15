@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { DecisionBadge, RankBadge, ScoreGauge } from "../primitives";
 import { DecisionDonut, DecisionLegend } from "../decision-donut";
+import { StarButton } from "../star-button";
 import { fmtUsd } from "@/lib/format";
 import { Radar, RefreshCw, Search, Download, Filter, ArrowDownUp, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -250,6 +251,14 @@ export function ScannerView() {
                           <div className="font-semibold leading-tight">{p.symbol}</div>
                           <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">{p.name}</div>
                         </div>
+                        <StarButton
+                          symbol={p.symbol}
+                          name={p.name}
+                          sector={p.sector}
+                          logoUrl={p.logoUrl}
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100"
+                        />
                       </div>
                     </td>
                     <td className="px-3 py-2.5">

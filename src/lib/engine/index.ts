@@ -21,6 +21,7 @@ export { buildEvidenceGraph, generateHistoricalScores } from "./evidence";
 export { buildTokenomicsSchedule } from "./tokenomics";
 export { buildCapitalFlowProfile } from "./capital-flow";
 export { buildCatalystReport } from "./catalyst";
+export { generatePriceSeries } from "./price-chart";
 
 // Score a single project. marketRegime (M) is computed universe-wide and passed in.
 export function scoreProject(

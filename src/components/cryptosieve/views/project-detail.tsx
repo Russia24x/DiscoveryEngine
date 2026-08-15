@@ -15,6 +15,9 @@ import { HistoricalTrendChart } from "../historical-trend";
 import { TokenomicsView } from "../tokenomics-view";
 import { CapitalFlowView } from "../capital-flow-view";
 import { CatalystView } from "../catalyst-view";
+import { PriceChartView } from "../price-chart-view";
+import { StarButton } from "../star-button";
+import { CopilotChat } from "../copilot-chat";
 import { fmtUsd, fmtNum, fmtPct } from "@/lib/format";
 import {
   ArrowLeft,
@@ -54,6 +57,7 @@ interface Detail {
   tokenomics?: any;
   capitalFlow?: any;
   catalystReport?: any;
+  priceSeries?: any;
   evidences: any[];
   risks: any[];
 }
@@ -190,12 +194,22 @@ function ProjectDetailBody({ data }: { data: Detail }) {
                 <div className="font-mono font-bold num">{data.fdv ? fmtUsd(data.fdv) : "—"}</div>
               </div>
             </div>
+            <StarButton
+              symbol={data.symbol}
+              name={data.name}
+              sector={data.sector}
+              logoUrl={data.logoUrl}
+              size="lg"
+            />
           </CardContent>
         </div>
       </Card>
 
       {/* v1.1: Separation cards — Project ≠ Token ≠ Investment */}
       {data.separation && <SeparationCards data={data.separation} />}
+
+      {/* Price chart with technical indicators */}
+      {data.priceSeries && <PriceChartView series={data.priceSeries} />}
 
       {/* IA Pipeline + Decision */}
       <div className="grid lg:grid-cols-3 gap-4">
@@ -438,6 +452,9 @@ function ProjectDetailBody({ data }: { data: Detail }) {
 
       {/* v1.4: Catalyst Calendar & Kill Conditions */}
       {data.catalystReport && <CatalystView report={data.catalystReport} />}
+
+      {/* v2.0: AI Research Copilot */}
+      <CopilotChat symbol={data.symbol} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ScoreGauge, DecisionBadge, RankBadge, Sparkline } from "../primitives";
+import { WatchlistView } from "../watchlist-view";
 import { fmtUsd, fmtPct, timeAgo } from "@/lib/format";
 import { Radar, TrendingUp, ShieldCheck, AlertTriangle, Activity, Zap, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -224,6 +225,9 @@ export function DashboardView() {
           </Card>
         </div>
       )}
+
+      {/* Watchlist */}
+      <WatchlistView />
 
       {/* Recent scans */}
       {data?.recentScans && data.recentScans.length > 0 && (
