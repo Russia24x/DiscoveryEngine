@@ -269,3 +269,34 @@ Priority Next:
 - Persist historical scores per scan for real trend tracking
 - Add more data sources (CoinMarketCap key-based)
 - Mobile responsive refinements
+
+---
+
+Task ID: 8
+Agent: main (cron webDevReview)
+Task: QA testing + continuous monitoring + historical score persistence
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 11 views rendering correctly. No console errors.
+- Continuous Monitoring (auto-scan + alert triggers):
+  - New hook `src/lib/use-monitoring.ts`: useMonitoring() manages auto-scan interval (60s minimum), persists config to localStorage, restores on mount. Compares scan results with previous to auto-trigger alerts when: IA Final drops below threshold, decision changes, gate breach, thesis status changes.
+  - Settings page: added Continuous Monitoring card with enable/disable switch, interval selector (1m/5m/10m/30m/1h), ACTIVE badge with pulse animation.
+  - App shell: monitoring status indicator bar in header (green when active, primary shimmer when scanning).
+- Historical Score Persistence (real trend tracking):
+  - New Prisma model HistoricalScore: stores pq/tq/va/v/r/iaRaw/confidence/iaEffective/iaFinal/decision/marketRank per project per scan.
+  - Updated scan route persistScan(): creates HistoricalScore records in bulk via ScanRecord.scores relation (nested write).
+  - New API GET /api/history?symbol=X: returns historical score records for a project. Without symbol, returns recent scans with score counts.
+  - Verified: HYPE has 1 persisted score (iaFinal=18.2, INVESTIGATE), 20 scans recorded with 22 scores each.
+- Lint clean (0 errors). Committed + pushed (49b55dd).
+
+Stage Summary:
+- App now has continuous monitoring with auto-scan + auto-trigger alerts, and real historical score persistence per scan.
+- Verified: settings shows Continuous Monitoring card with interval selector, history API returns persisted scores (HYPE iaFinal=18.2, 20 scans with 22 scores each), header shows monitoring status bar. No browser errors.
+
+Priority Next:
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Add more data sources (CoinMarketCap key-based)
+- Mobile responsive refinements
+- Use real historical scores in HistoricalTrendChart (currently synthetic)
+- Add comparison of historical scores between projects
