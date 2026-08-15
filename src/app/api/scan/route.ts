@@ -87,7 +87,7 @@ async function persistScan(
   rejected: number,
   investigate: number
 ) {
-  await db.scanRecord.create({
+  const scan = await db.scanRecord.create({
     data: {
       status: "done",
       universeSize: enriched.length,
@@ -109,6 +109,22 @@ async function persistScan(
           mr: p.marketRank,
         }))
       ),
+      scores: {
+        create: enriched.map((p) => ({
+          symbol: p.symbol,
+          pq: p.components.pq ?? null,
+          tq: p.components.tq ?? null,
+          va: p.components.va ?? null,
+          v: p.components.v ?? null,
+          r: p.components.r ?? null,
+          iaRaw: p.iaRaw ?? null,
+          confidence: p.confidence ?? null,
+          iaEffective: p.iaEffective ?? null,
+          iaFinal: p.iaFinal ?? null,
+          decision: p.decision,
+          marketRank: p.marketRank,
+        })),
+      },
     },
   });
 

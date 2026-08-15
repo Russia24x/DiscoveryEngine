@@ -35,6 +35,7 @@ import { SettingsView } from "./views/settings";
 import { FrameworkView } from "./views/framework";
 import { CommandPalette } from "./command-palette";
 import { AlertsBell, AlertsManager } from "./alerts";
+import { useMonitoring } from "@/lib/use-monitoring";
 
 const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
@@ -53,6 +54,7 @@ const NAV: { key: View; icon: any; labelKey: string }[] = [
 export function AppShell() {
   const { t, locale, setLocale, theme, setTheme } = useI18n();
   const { view, setView, scanning } = useApp();
+  const { config: monitoringConfig } = useMonitoring();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -139,6 +141,11 @@ export function AppShell() {
             </span>
           </div>
         </div>
+        {monitoringConfig.enabled && !scanning && (
+          <div className="h-0.5 w-full bg-pass/20 overflow-hidden">
+            <div className="h-full w-full bg-pass/60 animate-pulse-soft" />
+          </div>
+        )}
         {scanning && (
           <div className="h-0.5 w-full bg-muted overflow-hidden">
             <div className="h-full w-1/3 bg-primary shimmer" />

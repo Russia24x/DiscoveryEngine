@@ -1,17 +1,21 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useI18n } from "@/i18n/provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Languages, Palette, Info, FileText, Shield, Download, Upload, Database } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Languages, Palette, Info, FileText, Shield, Download, Upload, Database, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { handleExport, handleImport } from "@/lib/data-io";
+import { useMonitoring } from "@/lib/use-monitoring";
 
 export function SettingsView() {
   const { t, locale, setLocale, theme, setTheme } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { config, setConfig } = useMonitoring();
+  const [intervalSec, setIntervalSec] = useState(config.intervalSec || 300);
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
@@ -101,6 +105,57 @@ export function SettingsView() {
               </a>
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Continuous Monitoring */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Radio className={cn("h-4 w-4 text-primary", config.enabled && "animate-pulse")} />
+            Continuous Monitoring
+            {config.enabled && (
+              <Badge className="text-[9px] gap-1 bg-pass/15 text-pass border-pass/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-pass animate-pulse" />
+                ACTIVE
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Auto-scan the market on an interval and trigger alerts when scores, decisions, gates, or thesis status change.
+          </p>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Switch
+                checked={config.enabled}
+                onCheckedChange={(v) => setConfig(v, intervalSec)}
+              />
+              <span className="text-xs">{config.enabled ? "Monitoring" : "Stopped"}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Interval:</span>
+              <select
+                value={intervalSec}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  setIntervalSec(v);
+                  if (config.enabled) setConfig(true, v);
+                }}
+                className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+              >
+                <option value={60}>1 min</option>
+                <option value={300}>5 min</option>
+                <option value={600}>10 min</option>
+                <option value={1800}>30 min</option>
+                <option value={3600}>1 hour</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">
+            Min interval is 60s to avoid rate-limiting free APIs. Alerts trigger automatically when monitored values change.
+          </p>
         </CardContent>
       </Card>
 

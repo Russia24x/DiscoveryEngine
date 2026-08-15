@@ -160,6 +160,30 @@ model ScanRecord {
   investigateCount Int   @default(0)
   status        String   @default("running") // running | done | failed
   resultsJson   String?  // JSON snapshot of top ranked results
+  scores        HistoricalScore[]
+}
+
+// ─── Historical scores (persisted per scan for real trend tracking) ──────────
+model HistoricalScore {
+  id          String   @id @default(cuid())
+  scan        ScanRecord @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  scanId      String
+  symbol      String
+  pq          Float?
+  tq          Float?
+  va          Float?
+  v           Float?
+  r           Float?
+  iaRaw       Float?
+  confidence  Float?
+  iaEffective Float?
+  iaFinal     Float?
+  decision    String?
+  marketRank  Int?
+  recordedAt  DateTime @default(now())
+
+  @@index([symbol, recordedAt])
+  @@index([scanId])
 }
 
 // ─── News & Social feeds ─────────────────────────────────────────────────────
