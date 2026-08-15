@@ -13,6 +13,18 @@ export async function GET() {
     const recentScans = await db.scanRecord.findMany({
       orderBy: { startedAt: "desc" },
       take: 5,
+      // Select only the fields needed by the dashboard — exclude the heavy
+      // resultsJson blob (~50 projects × 10 fields) to keep the payload light.
+      select: {
+        id: true,
+        startedAt: true,
+        finishedAt: true,
+        universeSize: true,
+        passedCount: true,
+        rejectedCount: true,
+        investigateCount: true,
+        status: true,
+      },
     });
 
     const passed = projects.filter((p) => p.gatePassed).length;

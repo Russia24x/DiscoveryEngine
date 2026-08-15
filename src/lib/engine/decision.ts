@@ -31,15 +31,16 @@ export function decide(input: ProjectInput, scores: Omit<Scores, "decision" | "d
   if (v >= 60) forArr.push("Reasonable valuation");
   if (vae >= 50) forArr.push(`VAE ${Math.round(vae)}% — value reaching tokenholders`);
 
-  // negatives
+  // negatives — guard against missing data being interpreted as weak values.
+  // Only show "weak accrual" if VAE was actually computed (not null/undefined).
   if (r >= 70) againstArr.push("Elevated risk profile");
   if (r >= 80) againstArr.push(`Risk score ${Math.round(r)} — near gate`);
   if ((input.insiderConcentration ?? 0) >= 70) againstArr.push("Insider concentration = high");
   if ((input.revenueConcentration ?? 0) >= 70) againstArr.push("Revenue concentration = high");
   if (scores.supply.fdr != null && scores.supply.fdr >= 0.3)
     againstArr.push(`${Math.round(scores.supply.fdr * 100)}% float dilution risk (12m)`);
-  if (vae < 30) againstArr.push(`VAE only ${Math.round(vae)}% — weak accrual`);
-  if (delta < 15) againstArr.push(`δ ${Math.round(delta)}% — low distribution`);
+  if (scores.vae.vae != null && vae < 30) againstArr.push(`VAE only ${Math.round(vae)}% — weak accrual`);
+  if (scores.vae.delta != null && delta < 15) againstArr.push(`δ ${Math.round(delta)}% — low distribution`);
   if ((input.unlockEmission12m ?? 0) > 0 && (input.marketCap ?? 0) > 0) {
     const unlockPct = (input.unlockEmission12m! / input.marketCap!) * 100;
     if (unlockPct >= 10) againstArr.push(`${Math.round(unlockPct)}% unlock next 12m`);

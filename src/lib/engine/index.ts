@@ -93,33 +93,28 @@ export function rankUniverse(
     };
   });
 
+  // Build a Map for O(1) lookup by symbol (avoids O(n²) find calls).
+  const scoredMap = new Map(scored.map((s) => [s.symbol, s]));
+
+  // Helper: sort by a metric desc and assign ranks via the Map.
+  function assignRanks(sorted: typeof scored, field: "fundamentalRank" | "confidenceRank" | "effectiveRank" | "marketRank") {
+    sorted.forEach((p, i) => {
+      const target = scoredMap.get(p.symbol);
+      if (target) target[field] = i + 1;
+    });
+  }
+
   // Fundamental rank by IA_raw desc
-  const byIaRaw = [...scored].sort((a, b) => (b.iaRaw ?? 0) - (a.iaRaw ?? 0));
-  byIaRaw.forEach((p, i) => {
-    const target = scored.find((s) => s.symbol === p.symbol)!;
-    target.fundamentalRank = i + 1;
-  });
+  assignRanks([...scored].sort((a, b) => (b.iaRaw ?? 0) - (a.iaRaw ?? 0)), "fundamentalRank");
 
   // Confidence rank by C desc
-  const byConf = [...scored].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
-  byConf.forEach((p, i) => {
-    const target = scored.find((s) => s.symbol === p.symbol)!;
-    target.confidenceRank = i + 1;
-  });
+  assignRanks([...scored].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0)), "confidenceRank");
 
   // Effective rank by IA_effective desc
-  const byEff = [...scored].sort((a, b) => (b.iaEffective ?? 0) - (a.iaEffective ?? 0));
-  byEff.forEach((p, i) => {
-    const target = scored.find((s) => s.symbol === p.symbol)!;
-    target.effectiveRank = i + 1;
-  });
+  assignRanks([...scored].sort((a, b) => (b.iaEffective ?? 0) - (a.iaEffective ?? 0)), "effectiveRank");
 
   // Market rank (actionable) by IA_final desc
-  const byFinal = [...scored].sort((a, b) => (b.iaFinal ?? 0) - (a.iaFinal ?? 0));
-  byFinal.forEach((p, i) => {
-    const target = scored.find((s) => s.symbol === p.symbol)!;
-    target.marketRank = i + 1;
-  });
+  assignRanks([...scored].sort((a, b) => (b.iaFinal ?? 0) - (a.iaFinal ?? 0)), "marketRank");
 
   return scored;
 }
