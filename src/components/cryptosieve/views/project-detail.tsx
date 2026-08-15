@@ -12,6 +12,9 @@ import { ScoreGauge, MetricBar, DecisionBadge, RankBadge, GatePill } from "../pr
 import { EvidenceGraphView } from "../evidence-graph";
 import { SeparationCards } from "../separation-cards";
 import { HistoricalTrendChart } from "../historical-trend";
+import { TokenomicsView } from "../tokenomics-view";
+import { CapitalFlowView } from "../capital-flow-view";
+import { CatalystView } from "../catalyst-view";
 import { fmtUsd, fmtNum, fmtPct } from "@/lib/format";
 import {
   ArrowLeft,
@@ -48,6 +51,9 @@ interface Detail {
   evidenceGraph?: any;
   historicalSeries?: any[];
   separation?: any;
+  tokenomics?: any;
+  capitalFlow?: any;
+  catalystReport?: any;
   evidences: any[];
   risks: any[];
 }
@@ -315,6 +321,9 @@ function ProjectDetailBody({ data }: { data: Detail }) {
         </Card>
       </div>
 
+      {/* v1.3: Tokenomics & Unlock Schedule */}
+      {data.tokenomics && <TokenomicsView schedule={data.tokenomics} />}
+
       {/* Gates */}
       <Card>
         <CardHeader className="pb-2">
@@ -423,6 +432,12 @@ function ProjectDetailBody({ data }: { data: Detail }) {
           </CardContent>
         </Card>
       )}
+
+      {/* v1.3: Capital Flow & Smart Money */}
+      {data.capitalFlow && <CapitalFlowView profile={data.capitalFlow} />}
+
+      {/* v1.4: Catalyst Calendar & Kill Conditions */}
+      {data.catalystReport && <CatalystView report={data.catalystReport} />}
     </div>
   );
 }

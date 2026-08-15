@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { collectUniverse } from "@/lib/datasources/registry";
-import { benchmarkUniverse, buildEvidenceGraph, generateHistoricalScores, rankUniverse, scoreProject } from "@/lib/engine";
+import { benchmarkUniverse, buildCatalystReport, buildCapitalFlowProfile, buildEvidenceGraph, buildTokenomicsSchedule, generateHistoricalScores, rankUniverse, scoreProject } from "@/lib/engine";
 import { generateDefaultThesis } from "@/lib/engine/thesis-seed";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +67,15 @@ export async function GET(req: Request) {
       verdict: separationVerdict(scores),
     };
 
+    // v1.3: Tokenomics schedule (12-month unlock + dilution projection).
+    const tokenomics = buildTokenomicsSchedule(input);
+
+    // v1.3: Capital flow / smart money profile.
+    const capitalFlow = buildCapitalFlowProfile(input);
+
+    // v1.4: Catalyst report + kill conditions.
+    const catalystReport = buildCatalystReport(input, scores, tokenomics);
+
     return NextResponse.json({
       symbol,
       name: input.name,
@@ -102,6 +111,9 @@ export async function GET(req: Request) {
       evidenceGraph,
       historicalSeries,
       separation,
+      tokenomics,
+      capitalFlow,
+      catalystReport,
       evidences: [],
       risks: [],
       dbSnapshot: dbProject,

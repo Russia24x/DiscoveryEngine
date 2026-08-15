@@ -18,6 +18,9 @@ export { computeMarketRegime } from "./types";
 export { evaluateThesis } from "./thesis";
 export { benchmarkUniverse, relativeAttractiveness, percentileRank } from "./peer-benchmark";
 export { buildEvidenceGraph, generateHistoricalScores } from "./evidence";
+export { buildTokenomicsSchedule } from "./tokenomics";
+export { buildCapitalFlowProfile } from "./capital-flow";
+export { buildCatalystReport } from "./catalyst";
 
 // Score a single project. marketRegime (M) is computed universe-wide and passed in.
 export function scoreProject(
