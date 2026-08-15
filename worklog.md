@@ -300,3 +300,36 @@ Priority Next:
 - Mobile responsive refinements
 - Use real historical scores in HistoricalTrendChart (currently synthetic)
 - Add comparison of historical scores between projects
+
+---
+
+Task ID: 9
+Agent: main (cron webDevReview)
+Task: QA testing + real historical scores in trend chart + AI Copilot streaming
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 11 views rendering correctly. No console errors.
+- Real Historical Scores in Trend Chart:
+  - Updated project-detail API to fetch real HistoricalScore records from DB.
+    If 2+ scans exist, uses real persisted scores with scan-based labels
+    (e.g. '4scans', '3scans', 'now'). Falls back to synthetic for new projects.
+  - padHistory() helper ensures at least 6 data points by repeating first entry.
+  - Verified: HYPE trend now shows real labels ['5scans','4scans','3scans','2scans','1scans','now'] with actual PQ values.
+- AI Copilot Streaming:
+  - New API POST /api/copilot-stream: SSE streaming endpoint using z-ai-web-dev-sdk with stream:true. Returns text/event-stream with data chunks.
+  - Updated CopilotChat: tries streaming first, falls back to non-streaming /api/copilot if stream produces no content. Streaming cursor (animated blinking bar) shows while content is being received.
+  - MessageBubble: added streaming prop with animated cursor, fade-up animation on all messages.
+- Lint clean (0 errors). Committed + pushed (40051d9).
+
+Stage Summary:
+- Historical trend chart now uses REAL persisted scores from scans instead of synthetic data.
+- AI Copilot supports streaming responses with fallback to non-streaming.
+- Verified: HYPE detail shows "5scans", "4scans"... labels in trend chart, AI Copilot present at bottom of detail page. No browser errors.
+
+Priority Next:
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Add more data sources (CoinMarketCap key-based)
+- Mobile responsive refinements
+- Add comparison of historical scores between projects
+- Performance optimizations for large universes
