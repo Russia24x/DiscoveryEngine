@@ -13,7 +13,7 @@ import { DecisionBadge, RankBadge, ScoreGauge } from "../primitives";
 import { DecisionDonut, DecisionLegend } from "../decision-donut";
 import { StarButton } from "../star-button";
 import { fmtUsd } from "@/lib/format";
-import { Radar, RefreshCw, Search, Download, Filter, ArrowDownUp, CheckCircle2, XCircle } from "lucide-react";
+import { Radar, RefreshCw, Search, Download, Filter, ArrowDownUp, CheckCircle2, XCircle, Zap, Rows3, Rows4 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SortKey = "fundamental" | "confidence" | "effective" | "market";
@@ -27,6 +27,8 @@ export function ScannerView() {
   const [showRejected, setShowRejected] = useState(false);
   const [minConf, setMinConf] = useState(0);
   const [sectorFilter, setSectorFilter] = useState<string>("all");
+  const [activePreset, setActivePreset] = useState<string>("none");
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   async function runScan() {
     setScanning(true);
@@ -70,11 +72,30 @@ export function ScannerView() {
     if (onlyPassed) arr = arr.filter((p) => p.gatePassed);
     if (!showRejected) arr = arr.filter((p) => p.decision !== "REJECT");
     if (minConf > 0) arr = arr.filter((p) => (p.confidence ?? 0) >= minConf);
-    const sortKey =
-      sort === "fundamental" ? "iaRaw" : sort === "confidence" ? "confidence" : sort === "effective" ? "iaEffective" : "iaFinal";
-    arr.sort((a, b) => (b[sortKey as keyof typeof b] as number ?? 0) - (a[sortKey as keyof typeof a] as number ?? 0));
+
+    // Preset filters
+    if (activePreset === "topGainers") {
+      arr = arr.filter((p) => (p as any).input?.revenueGrowth >= 20);
+      arr.sort((a, b) => ((b as any).input?.revenueGrowth ?? 0) - ((a as any).input?.revenueGrowth ?? 0));
+    } else if (activePreset === "undervalued") {
+      arr = arr.filter((p) => (p.components.v ?? 0) >= 55 && (p.iaRaw ?? 0) >= 15);
+      arr.sort((a, b) => (b.components.v ?? 0) - (a.components.v ?? 0));
+    } else if (activePreset === "highVae") {
+      arr = arr.filter((p) => (p.vae?.vae ?? 0) >= 25);
+      arr.sort((a, b) => (b.vae?.vae ?? 0) - (a.vae?.vae ?? 0));
+    } else if (activePreset === "lowRisk") {
+      arr = arr.filter((p) => (p.components.r ?? 100) <= 55);
+      arr.sort((a, b) => (a.components.r ?? 100) - (b.components.r ?? 100));
+    } else if (activePreset === "highConfidence") {
+      arr = arr.filter((p) => (p.confidence ?? 0) >= 0.9);
+      arr.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+    } else {
+      const sortKey =
+        sort === "fundamental" ? "iaRaw" : sort === "confidence" ? "confidence" : sort === "effective" ? "iaEffective" : "iaFinal";
+      arr.sort((a, b) => (b[sortKey as keyof typeof b] as number ?? 0) - (a[sortKey as keyof typeof a] as number ?? 0));
+    }
     return arr;
-  }, [scanResults, q, sectorFilter, onlyPassed, showRejected, minConf, sort]);
+  }, [scanResults, q, sectorFilter, onlyPassed, showRejected, minConf, sort, activePreset]);
 
   // Extract unique sectors for the filter dropdown.
   const sectors = useMemo(() => {
@@ -132,6 +153,15 @@ export function ScannerView() {
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length} className="gap-1.5">
             <Download className="h-3.5 w-3.5" /> {t.scanner.export}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDensity(density === "comfortable" ? "compact" : "comfortable")}
+            className="gap-1.5"
+            title={density === "comfortable" ? "Switch to compact" : "Switch to comfortable"}
+          >
+            {density === "comfortable" ? <Rows3 className="h-3.5 w-3.5" /> : <Rows4 className="h-3.5 w-3.5" />}
+          </Button>
           <Button size="sm" onClick={runScan} disabled={scanning} className="gap-1.5">
             <RefreshCw className={cn("h-3.5 w-3.5", scanning && "animate-spin")} />
             {scanning ? t.scanner.scanning : t.scanner.runScan}
@@ -168,6 +198,34 @@ export function ScannerView() {
         </div>
       )}
 
+      {/* Presets */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <Zap className="h-3.5 w-3.5" /> Presets:
+        </span>
+        {([
+          { key: "none", label: "All" },
+          { key: "topGainers", label: "Top Gainers" },
+          { key: "undervalued", label: "Undervalued" },
+          { key: "highVae", label: "High VAE" },
+          { key: "lowRisk", label: "Low Risk" },
+          { key: "highConfidence", label: "High Confidence" },
+        ] as const).map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setActivePreset(p.key)}
+            className={cn(
+              "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors",
+              activePreset === p.key
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent"
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center gap-3">
@@ -180,19 +238,21 @@ export function ScannerView() {
               className="ps-8 h-9 text-sm"
             />
           </div>
-          <div className="flex items-center gap-1.5">
-            {(["fundamental", "confidence", "effective", "market"] as SortKey[]).map((k) => (
-              <Button
-                key={k}
-                variant={sort === k ? "default" : "outline"}
-                size="sm"
-                className="h-8 text-xs"
-                onClick={() => setSort(k)}
-              >
-                {(t.scanner as any)[`sort${k[0].toUpperCase() + k.slice(1)}`]}
-              </Button>
-            ))}
-          </div>
+          {activePreset === "none" && (
+            <div className="flex items-center gap-1.5">
+              {(["fundamental", "confidence", "effective", "market"] as SortKey[]).map((k) => (
+                <Button
+                  key={k}
+                  variant={sort === k ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setSort(k)}
+                >
+                  {(t.scanner as any)[`sort${k[0].toUpperCase() + k.slice(1)}`]}
+                </Button>
+              ))}
+            </div>
+          )}
           {/* Sector filter */}
           {sectors.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -273,9 +333,12 @@ export function ScannerView() {
                   <tr
                     key={p.symbol}
                     onClick={() => openProject(p.symbol)}
-                    className="border-t border-border hover:bg-muted/40 cursor-pointer transition-colors group"
+                    className={cn(
+                      "border-t border-border hover:bg-muted/40 cursor-pointer transition-colors group",
+                      density === "compact" && "hover:bg-muted/30"
+                    )}
                   >
-                    <td className="px-3 py-2.5 sticky start-0 bg-card group-hover:bg-muted/40">
+                    <td className={cn("px-3 sticky start-0 bg-card group-hover:bg-muted/40", density === "compact" ? "py-1.5" : "py-2.5")}>
                       <div className="flex items-center gap-2">
                         {p.logoUrl ? (
                           <img src={p.logoUrl} alt="" className="h-6 w-6 rounded-full" />
@@ -301,28 +364,28 @@ export function ScannerView() {
                     <td className="px-3 py-2.5">
                       <Badge variant="outline" className="text-[10px] font-normal">{p.sector ?? "—"}</Badge>
                     </td>
-                    <td className="px-3 py-2.5 text-end font-mono num text-xs">{p.priceUsd ? fmtUsd(p.priceUsd) : "—"}</td>
+                    <td className="px-3 py-2 text-end font-mono num text-xs">{p.priceUsd ? fmtUsd(p.priceUsd) : "—"}</td>
                     <ComponentCell v={p.components.pq} />
                     <ComponentCell v={p.components.tq} />
                     <ComponentCell v={p.components.va} />
                     <ComponentCell v={p.components.v} />
                     <ComponentCell v={p.components.r} invert />
-                    <td className="px-3 py-2.5 text-end font-mono font-semibold num">{p.iaRaw?.toFixed(1) ?? "—"}</td>
-                    <td className="px-3 py-2.5 text-end font-mono num text-xs text-muted-foreground">
+                    <td className="px-3 py-2 text-end font-mono font-semibold num">{p.iaRaw?.toFixed(1) ?? "—"}</td>
+                    <td className="px-3 py-2 text-end font-mono num text-xs text-muted-foreground">
                       {p.confidence != null ? `${Math.round(p.confidence * 100)}%` : "—"}
                     </td>
-                    <td className="px-3 py-2.5 text-end font-mono num">{p.iaEffective?.toFixed(1) ?? "—"}</td>
-                    <td className="px-3 py-2.5 text-end font-mono font-bold num text-primary">
+                    <td className="px-3 py-2 text-end font-mono num">{p.iaEffective?.toFixed(1) ?? "—"}</td>
+                    <td className="px-3 py-2 text-end font-mono font-bold num text-primary">
                       {p.iaFinal?.toFixed(1) ?? "—"}
                     </td>
-                    <td className="px-3 py-2.5 text-center">
+                    <td className="px-3 py-2 text-center">
                       {p.gatePassed ? (
                         <CheckCircle2 className="h-4 w-4 text-pass inline" />
                       ) : (
                         <XCircle className="h-4 w-4 text-reject inline" />
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-center">
+                    <td className="px-3 py-2 text-center">
                       <DecisionBadge decision={p.decision as any} size="sm" />
                     </td>
                   </tr>
@@ -362,11 +425,11 @@ function MiniStat({
 }
 
 function ComponentCell({ v, invert }: { v?: number | null; invert?: boolean }) {
-  if (v == null) return <td className="px-3 py-2.5 text-center text-muted-foreground">—</td>;
+  if (v == null) return <td className="px-3 py-2 text-center text-muted-foreground">—</td>;
   const tone = invert ? (v >= 70 ? "bad" : v >= 50 ? "warn" : "good") : v >= 66 ? "good" : v >= 40 ? "warn" : "bad";
   const color = tone === "good" ? "text-pass" : tone === "warn" ? "text-investigate" : "text-reject";
   return (
-    <td className={cn("px-3 py-2.5 text-center font-mono num text-xs font-medium", color)}>
+    <td className={cn("px-3 py-2 text-center font-mono num text-xs font-medium", color)}>
       {Math.round(v)}
     </td>
   );

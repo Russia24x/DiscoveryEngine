@@ -38,6 +38,8 @@ import { FrameworkView } from "./views/framework";
 import { CommandPalette } from "./command-palette";
 import { AlertsBell, AlertsManager } from "./alerts";
 import { useMonitoring } from "@/lib/use-monitoring";
+import { KeyboardHelp } from "./keyboard-help";
+import { useEffect } from "react";
 
 const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
@@ -59,8 +61,56 @@ export function AppShell() {
   const { view, setView, scanning } = useApp();
   const { config: monitoringConfig } = useMonitoring();
 
+  // Keyboard navigation: G+key to switch views, T for theme, L for language.
+  useEffect(() => {
+    let gPressed = false;
+    let gTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function handler(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === "g") {
+        gPressed = true;
+        if (gTimer) clearTimeout(gTimer);
+        gTimer = setTimeout(() => { gPressed = false; }, 800);
+        return;
+      }
+
+      if (gPressed) {
+        gPressed = false;
+        if (gTimer) clearTimeout(gTimer);
+        const viewMap: Record<string, View> = {
+          d: "dashboard", s: "scanner", p: "portfolio", c: "compare",
+          h: "heatmap", a: "alerts", f: "framework", n: "news",
+        };
+        if (viewMap[key]) {
+          e.preventDefault();
+          setView(viewMap[key]);
+        }
+        return;
+      }
+
+      if (key === "t") {
+        e.preventDefault();
+        setTheme(theme === "dark" ? "light" : "dark");
+      }
+      if (key === "l") {
+        e.preventDefault();
+        setLocale(locale === "fa" ? "en" : "fa");
+      }
+    }
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [theme, locale, setTheme, setLocale, setView]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <KeyboardHelp />
       {/* Top header */}
       <header className="sticky top-0 z-40 glass border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">
