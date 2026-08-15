@@ -73,3 +73,4 @@ server.log
 screenshot-*.png
 .watchdog.log
 .watchdog.sh
+tool-results/
