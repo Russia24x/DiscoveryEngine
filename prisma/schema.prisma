@@ -1,0 +1,189 @@
+// CryptoSieve / DiscoveryEngine — Prisma schema
+// See FRAMEWORK.md for the locked scoring architecture.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Core: a crypto project / asset ──────────────────────────────────────────
+model Project {
+  id              String   @id @default(cuid())
+  symbol          String   @unique
+  name            String
+  slug            String?
+  sector          String?
+  chain           String?
+  logoUrl         String?
+
+  // Latest computed snapshot (per FRAMEWORK.md)
+  pq              Float? // Project Quality 0-100
+  tq              Float? // Token Quality 0-100
+  va              Float? // Value Accrual 0-100
+  v               Float? // Valuation 0-100
+  r               Float? // Risk 0-100
+  iaRaw           Float? // Fundamental
+  confidence      Float? // C in [0.70, 1.00]
+  iaEffective     Float? // IA_raw * C
+  marketRegime    Float? // M in [0.90, 1.10]
+  iaFinal         Float? // IA_raw * C * M
+
+  fundamentalRank Int?
+  confidenceRank  Int?
+  effectiveRank   Int?
+  marketRank      Int?
+
+  gatePassed      Boolean @default(false)
+  gateReason      String? // comma-separated failed gates
+  decision        String? // PASS | INVESTIGATE | REJECT
+  decisionWhyJson String? // JSON: { for: [], against: [], triggers: [] }
+
+  // Value Accrual Chain
+  gea             Float? // Gross Economic Activity
+  pr              Float? // Protocol Revenue
+  pc              Float? // Protocol Capture
+  tc              Float? // Tokenholder Capture
+  alpha           Float? // PC / PR
+  delta           Float? // TC / PC
+  vae             Float? // TC / PR
+
+  // Supply metrics
+  sar             Float? // (Buyback+Burn)/(Unlock+Emission)
+  nsp             Float? // Unlock+Emission-Burn-Buyback
+  fdr             Float? // (12m Unlock+Emission)/Float
+
+  // Market data
+  priceUsd        Float?
+  marketCap       Float?
+  fdv             Float?
+  tvl             Float?
+  revenueAnnual   Float?
+  floatSupply     Float?
+  totalSupply     Float?
+
+  // Thesis
+  thesisStatus    String? // intact | weakened | broken
+  thesisPct       Float?
+
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  metrics         Metric[]
+  evidences       Evidence[]
+  risks           RiskEntry[]
+  thesis          Thesis?
+}
+
+model Metric {
+  id          String   @id @default(cuid())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  key         String // tvl, revenue30d, vae, etc.
+  value       Float
+  unit        String?
+  source      String?
+  timestamp   DateTime @default(now())
+
+  @@index([projectId, key])
+}
+
+model Evidence {
+  id            String   @id @default(cuid())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String
+  type          String // claim | metric | risk
+  title         String
+  value         String?
+  source        String?
+  sourceUrl     String?
+  timestamp     DateTime @default(now())
+  freshness     String? // fresh | stale | outdated
+  confidence    Float?
+  grade         String? // A | B | C
+  contradiction String?
+
+  @@index([projectId])
+}
+
+model RiskEntry {
+  id          String   @id @default(cuid())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  category    String // RC | IC | REG | SC | ML | DR
+  severity    Float // 0-100
+  status      String? // open | mitigated | critical
+  note        String?
+
+  @@index([projectId])
+}
+
+model Thesis {
+  id           String   @id @default(cuid())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String   @unique
+  title        String
+  whyWorksJson String   @default("[]") // JSON array of strings
+  mustStayTrueJson String @default("[]")
+  whatBreaksJson String  @default("[]")
+  latestEvidenceJson String @default("[]") // [{ text, dir: up|down|flat }]
+  status       String   @default("intact")
+  intactPct    Float    @default(100)
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Pluggable data sources ──────────────────────────────────────────────────
+model DataSource {
+  id          String   @id @default(cuid())
+  key         String   @unique // coingecko | defillama | binance | cmc | messari | nansen
+  name        String
+  type        String   // free | apikey
+  endpoint    String
+  apiKey      String?
+  enabled     Boolean  @default(true)
+  coverage    String?  // "Market data, Price"
+  lastSync    DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// ─── Market-wide scans ───────────────────────────────────────────────────────
+model ScanRecord {
+  id            String   @id @default(cuid())
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  universeSize  Int      @default(0)
+  passedCount   Int      @default(0)
+  rejectedCount Int      @default(0)
+  investigateCount Int   @default(0)
+  status        String   @default("running") // running | done | failed
+  resultsJson   String?  // JSON snapshot of top ranked results
+}
+
+// ─── News & Social feeds ─────────────────────────────────────────────────────
+model NewsSource {
+  id        String   @id @default(cuid())
+  type      String // rss | telegram | x
+  url       String
+  label     String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  items     NewsItem[]
+}
+
+model NewsItem {
+  id           String   @id @default(cuid())
+  source       NewsSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId     String
+  title        String
+  url          String?
+  summary      String?
+  publishedAt  DateTime
+  sentiment    String? // positive | neutral | negative
+  thesisImpact String?
+  createdAt    DateTime @default(now())
+
+  @@index([publishedAt])
+}
