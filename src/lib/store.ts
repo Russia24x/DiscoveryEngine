@@ -6,6 +6,8 @@ export type View =
   | "dashboard"
   | "scanner"
   | "project"
+  | "compare"
+  | "heatmap"
   | "sources"
   | "news"
   | "settings"

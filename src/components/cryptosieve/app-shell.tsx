@@ -18,10 +18,14 @@ import {
   Moon,
   Monitor,
   Github,
+  GitCompareArrows,
+  Grid3x3,
 } from "lucide-react";
 import { DashboardView } from "./views/dashboard";
 import { ScannerView } from "./views/scanner";
 import { ProjectDetailView } from "./views/project-detail";
+import { CompareView } from "./views/compare";
+import { HeatmapView } from "./views/heatmap";
 import { SourcesView } from "./views/sources";
 import { NewsView } from "./views/news";
 import { SettingsView } from "./views/settings";
@@ -31,6 +35,8 @@ const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
   { key: "scanner", icon: Radar, labelKey: "nav.scanner" },
   { key: "project", icon: Coins, labelKey: "nav.project" },
+  { key: "compare", icon: GitCompareArrows, labelKey: "nav.compare" },
+  { key: "heatmap", icon: Grid3x3, labelKey: "nav.heatmap" },
   { key: "sources", icon: Database, labelKey: "nav.sources" },
   { key: "news", icon: Newspaper, labelKey: "nav.news" },
   { key: "settings", icon: Settings, labelKey: "nav.settings" },
@@ -155,6 +161,8 @@ export function AppShell() {
         {view === "dashboard" && <DashboardView />}
         {view === "scanner" && <ScannerView />}
         {view === "project" && <ProjectDetailView />}
+        {view === "compare" && <CompareView />}
+        {view === "heatmap" && <HeatmapView />}
         {view === "sources" && <SourcesView />}
         {view === "news" && <NewsView />}
         {view === "settings" && <SettingsView />}
