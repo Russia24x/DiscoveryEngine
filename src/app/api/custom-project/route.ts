@@ -60,39 +60,40 @@ export async function POST(req: Request) {
     }
 
     // Build the ProjectInput from manual data.
+    // USD amounts are clamped to non-negative; component scores clamped to 0-100.
     const input = {
       symbol: symbol.toUpperCase(),
       name,
       sector,
       chain,
-      priceUsd: num(priceUsd),
-      marketCap: num(marketCap),
-      fdv: num(fdv),
-      totalSupply: num(totalSupply),
-      floatSupply: num(floatSupply),
-      pr: num(pr),
-      pc: num(pc),
-      tc: num(tc),
-      buybackBurnAnnual: num(buybackBurnAnnual),
-      unlockEmission12m: num(unlockEmission12m),
-      revenueGrowth: num(revenueGrowth) ?? 0,
-      marketPosition: num(marketPosition) ?? 50,
-      tokenUtility: num(tokenUtility) ?? 50,
-      governanceQuality: num(governanceQuality) ?? 50,
-      insiderConcentration: num(insiderConcentration) ?? 50,
-      smartContract: num(smartContract) ?? 40,
-      revenueConcentration: num(revenueConcentration) ?? 50,
-      regulatory: num(regulatory) ?? 45,
-      marketLiquidity: num(marketLiquidity) ?? 50,
-      dependency: num(dependency) ?? 45,
-      vaeTrend: num(vaeTrend) ?? 50,
-      buybackActivity: num(buybackActivity) ?? (num(buybackBurnAnnual) ? 60 : 30),
-      revenueStability: num(revenueStability) ?? 55,
-      revenueDiversification: num(revenueDiversification) ?? 50,
-      userGrowth: num(userGrowth) ?? 50,
-      tokenYield: num(tokenYield) ?? 35,
-      incentiveGravity: num(incentiveGravity) ?? 50,
-      buybackThesis: num(buybackBurnAnnual) > 0,
+      priceUsd: clampNonNeg(priceUsd),
+      marketCap: clampNonNeg(marketCap),
+      fdv: clampNonNeg(fdv),
+      totalSupply: clampNonNeg(totalSupply),
+      floatSupply: clampNonNeg(floatSupply),
+      pr: clampNonNeg(pr),
+      pc: clampNonNeg(pc),
+      tc: clampNonNeg(tc),
+      buybackBurnAnnual: clampNonNeg(buybackBurnAnnual),
+      unlockEmission12m: clampNonNeg(unlockEmission12m),
+      revenueGrowth: clampScore(revenueGrowth) ?? 0,
+      marketPosition: clampScore(marketPosition) ?? 50,
+      tokenUtility: clampScore(tokenUtility) ?? 50,
+      governanceQuality: clampScore(governanceQuality) ?? 50,
+      insiderConcentration: clampScore(insiderConcentration) ?? 50,
+      smartContract: clampScore(smartContract) ?? 40,
+      revenueConcentration: clampScore(revenueConcentration) ?? 50,
+      regulatory: clampScore(regulatory) ?? 45,
+      marketLiquidity: clampScore(marketLiquidity) ?? 50,
+      dependency: clampScore(dependency) ?? 45,
+      vaeTrend: clampScore(vaeTrend) ?? 50,
+      buybackActivity: clampScore(buybackActivity) ?? (clampNonNeg(buybackBurnAnnual) ? 60 : 30),
+      revenueStability: clampScore(revenueStability) ?? 55,
+      revenueDiversification: clampScore(revenueDiversification) ?? 50,
+      userGrowth: clampScore(userGrowth) ?? 50,
+      tokenYield: clampScore(tokenYield) ?? 35,
+      incentiveGravity: clampScore(incentiveGravity) ?? 50,
+      buybackThesis: (clampNonNeg(buybackBurnAnnual) ?? 0) > 0,
     };
 
     // Score with a neutral market regime.
@@ -185,6 +186,20 @@ function num(v: any): number | undefined {
   if (v == null || v === "") return undefined;
   const n = typeof v === "number" ? v : parseFloat(v);
   return isNaN(n) ? undefined : n;
+}
+
+// Clamp a value to 0-100 range (for component scores). Returns undefined for invalid input.
+function clampScore(v: any): number | undefined {
+  const n = num(v);
+  if (n == null) return undefined;
+  return Math.max(0, Math.min(100, n));
+}
+
+// Clamp a value to non-negative (for USD amounts). Returns undefined for invalid input.
+function clampNonNeg(v: any): number | undefined {
+  const n = num(v);
+  if (n == null) return undefined;
+  return Math.max(0, n);
 }
 
 function separationVerdict(scores: any): string {

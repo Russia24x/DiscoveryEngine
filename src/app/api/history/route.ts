@@ -8,7 +8,9 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const symbol = (url.searchParams.get("symbol") ?? "").toUpperCase();
-    const limit = parseInt(url.searchParams.get("limit") ?? "20");
+    // Clamp limit to 1-100 to prevent unbounded queries.
+    const rawLimit = parseInt(url.searchParams.get("limit") ?? "20");
+    const limit = isNaN(rawLimit) ? 20 : Math.max(1, Math.min(100, rawLimit));
 
     if (!symbol) {
       // Return all recent scans summary.

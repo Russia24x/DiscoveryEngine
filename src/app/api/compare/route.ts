@@ -18,6 +18,15 @@ export async function POST(req: Request) {
     if (!Array.isArray(symbols) || symbols.length < 2 || symbols.length > 4) {
       return NextResponse.json({ error: "Provide 2-4 symbols" }, { status: 400 });
     }
+    // Validate all elements are non-empty strings.
+    if (!symbols.every((s: any) => typeof s === "string" && s.trim().length > 0)) {
+      return NextResponse.json({ error: "All symbols must be non-empty strings" }, { status: 400 });
+    }
+    // Deduplicate (case-insensitive).
+    const uniqueSymbols = [...new Set(symbols.map((s: string) => s.toUpperCase()))];
+    if (uniqueSymbols.length < 2) {
+      return NextResponse.json({ error: "Provide at least 2 unique symbols" }, { status: 400 });
+    }
 
     const { inputs } = await collectUniverse({ useLive: false });
     const med = median(inputs.map((i) => (i as any).priceChange90d ?? 0)) || 0;
@@ -25,7 +34,7 @@ export async function POST(req: Request) {
     const ranked = rankUniverse(inputs, M);
     const percentiles = benchmarkUniverse(ranked);
 
-    const projects = symbols.map((sym: string) => {
+    const projects = uniqueSymbols.map((sym: string) => {
       const input = inputs.find((i) => i.symbol === sym.toUpperCase());
       if (!input) return null;
       const scores = scoreProject(input, M);

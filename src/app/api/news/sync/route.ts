@@ -14,20 +14,20 @@ export async function POST() {
     for (const src of sources) {
       try {
         const items = await fetchRss(src.url);
-        // Clear old items for this source, then insert fresh ones.
-        await db.newsItem.deleteMany({ where: { sourceId: src.id } });
-        for (const it of items) {
-          await db.newsItem.create({
-            data: {
+        // Atomic delete + batch insert in a transaction.
+        await db.$transaction([
+          db.newsItem.deleteMany({ where: { sourceId: src.id } }),
+          db.newsItem.createMany({
+            data: items.map((it) => ({
               sourceId: src.id,
               title: it.title,
               url: it.url,
               summary: it.summary,
               publishedAt: it.publishedAt,
               sentiment: classifySentiment(`${it.title} ${it.summary ?? ""}`),
-            },
-          });
-        }
+            })),
+          }),
+        ]);
         totalFetched += items.length;
         perSource.push({ id: src.id, label: src.label ?? src.url, count: items.length });
       } catch (e: any) {

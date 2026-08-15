@@ -30,15 +30,24 @@ export function DashboardView() {
   const { setView, openProject, scanning, setScanning, setScanResults, setScanMeta } = useApp();
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/market")
-      .then((r) => r.json())
-      .then((j) => {
-        if (!cancelled) setData(j);
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
       })
-      .catch(() => {})
+      .then((j) => {
+        if (!cancelled) {
+          setData(j);
+          setError(null);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e?.message ?? "Failed to load market data");
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -71,9 +80,15 @@ export function DashboardView() {
       setScanning(false);
       // refresh dashboard summary
       fetch("/api/market")
-        .then((r) => r.json())
-        .then((j) => setData(j))
-        .catch(() => {});
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((j) => {
+          setData(j);
+          setError(null);
+        })
+        .catch((e) => setError(e?.message ?? "Failed to refresh"));
     }
   }
 
@@ -207,6 +222,19 @@ export function DashboardView() {
           <Skeleton className="h-64 rounded-xl" />
           <Skeleton className="h-64 rounded-xl" />
         </div>
+      ) : error ? (
+        <Card className="border-reject/30">
+          <CardContent className="py-16 flex flex-col items-center text-center gap-3">
+            <div className="h-14 w-14 rounded-full bg-reject/10 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-reject" />
+            </div>
+            <p className="text-sm text-reject font-medium">Failed to load data</p>
+            <p className="text-xs text-muted-foreground max-w-sm">{error}</p>
+            <Button variant="outline" onClick={() => window.location.reload()} className="mt-2">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : !data?.hasData ? (
         <Card className="border-dashed">
           <CardContent className="py-16 flex flex-col items-center text-center gap-3">

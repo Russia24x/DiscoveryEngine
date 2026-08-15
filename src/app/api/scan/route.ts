@@ -12,8 +12,9 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const useLive = body?.useLive ?? true;
 
-    // Collect universe (live or bundled fallback).
-    const { inputs, live, sourcesUsed } = await collectUniverse({ useLive });
+    // Collect universe (live or bundled fallback). Skip cache for explicit scans
+    // so the user always gets fresh data when they click "Run Scan".
+    const { inputs, live, sourcesUsed } = await collectUniverse({ useLive, skipCache: true });
 
     // Market regime (M). In production this would come from BTC/mcap aggregate data;
     // here we derive a light signal from the universe's median 90d price change.
@@ -128,55 +129,12 @@ async function persistScan(
     },
   });
 
-  for (const p of enriched) {
-    const input = inputs.find((i) => i.symbol === p.symbol)!;
-    await db.project.upsert({
-      where: { symbol: p.symbol },
-      create: {
-        symbol: p.symbol,
-        name: p.name,
-        slug: p.name.toLowerCase().replace(/\s+/g, "-"),
-        sector: p.sector,
-        chain: p.chain,
-        logoUrl: p.logoUrl,
-        pq: p.components.pq ?? null,
-        tq: p.components.tq ?? null,
-        va: p.components.va ?? null,
-        v: p.components.v ?? null,
-        r: p.components.r ?? null,
-        iaRaw: p.iaRaw ?? null,
-        confidence: p.confidence ?? null,
-        iaEffective: p.iaEffective ?? null,
-        marketRegime: p.marketRegime ?? null,
-        iaFinal: p.iaFinal ?? null,
-        fundamentalRank: p.fundamentalRank,
-        confidenceRank: p.confidenceRank,
-        effectiveRank: p.effectiveRank,
-        marketRank: p.marketRank,
-        gatePassed: p.gatePassed,
-        gateReason: p.gateReasons.join(", ") || null,
-        decision: p.decision,
-        gea: input.gea ?? null,
-        pr: input.pr ?? null,
-        pc: input.pc ?? null,
-        tc: input.tc ?? null,
-        alpha: p.vae.alpha ?? null,
-        delta: p.vae.delta ?? null,
-        vae: p.vae.vae ?? null,
-        sar: p.supply.sar ?? null,
-        nsp: p.supply.nsp ?? null,
-        fdr: p.supply.fdr ?? null,
-        priceUsd: input.priceUsd ?? null,
-        marketCap: input.marketCap ?? null,
-        fdv: input.fdv ?? null,
-        tvl: input.pr ?? null,
-        revenueAnnual: input.pr ?? null,
-        floatSupply: input.floatSupply ?? null,
-        totalSupply: input.totalSupply ?? null,
-        thesisStatus: p.thesis.status,
-        thesisPct: p.thesis.intactPct,
-      },
-      update: {
+  // Batch all upserts in a single transaction for better performance.
+  // Uses Promise.all with parallel upserts instead of sequential awaits.
+  await db.$transaction(
+    enriched.map((p) => {
+      const input = inputs.find((i) => i.symbol === p.symbol)!;
+      const updateData = {
         name: p.name,
         sector: p.sector,
         chain: p.chain,
@@ -217,9 +175,18 @@ async function persistScan(
         totalSupply: input.totalSupply ?? null,
         thesisStatus: p.thesis.status,
         thesisPct: p.thesis.intactPct,
-      },
-    });
-  }
+      };
+      return db.project.upsert({
+        where: { symbol: p.symbol },
+        create: {
+          symbol: p.symbol,
+          slug: p.name.toLowerCase().replace(/\s+/g, "-"),
+          ...updateData,
+        },
+        update: updateData,
+      });
+    })
+  );
 }
 
 function median(arr: number[]): number {
