@@ -133,6 +133,39 @@ export function DashboardView() {
         </div>
       </div>
 
+      {/* Market regime indicator */}
+      {data?.hasData && (
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t.dashboard.marketRegime}</div>
+                  <div className="text-sm font-bold">{t.dashboard.regimeNeutral}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Regime meter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">Risk-Off</span>
+                  <div className="relative h-2 w-32 rounded-full bg-gradient-to-r from-reject via-investigate to-pass overflow-hidden">
+                    <div className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-foreground border-2 border-background shadow-md" style={{ left: "50%" }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Risk-On</span>
+                </div>
+                <div className="text-end">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">M</div>
+                  <div className="font-mono text-sm font-bold num text-primary">1.000</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
