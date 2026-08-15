@@ -475,3 +475,32 @@ Priority Next:
 - Add contentEditable guard to keyboard shortcuts
 - Add client-disconnect handling to copilot-stream
 - Consider Redis or edge-cache for multi-instance deployments
+
+---
+
+Task ID: 14
+Agent: main (engineering improvements round 2)
+Task: Fix useLive coercion, copilot-stream disconnect, error states, a11y guards
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- Fixed useLive string coercion bug in scan route: 'false' (string) is truthy, so useLive was always true. Now explicitly checks === false || === 'false'. Verified: useLive:'false' → live:false.
+- Added client-disconnect handling to copilot-stream: listens to req.signal 'abort' event and ReadableStream.cancel() callback. Stops consuming LLM tokens after client disconnects. Errors now sent as 'event: error' SSE instead of 'data:' to avoid being rendered as content.
+- Fixed news DELETE: returns 404 (not 500) when feed not found. Catches Prisma P2025 error code.
+- Added try/catch to news GET and datasources GET for consistent JSON error responses.
+- Added error states to heatmap (AlertCircle + retry button), portfolio (price fetch error banner), and compare (toast.error on fetch failure).
+- Added contentEditable guard to keyboard shortcuts in app-shell and keyboard-help.
+- Lint clean (0 errors). Committed + pushed (d7cd80d).
+
+Stage Summary:
+- useLive string coercion fixed — 'false' string now correctly disables live mode.
+- Copilot stream stops consuming tokens on client disconnect (cost + resource savings).
+- All views now have proper error states instead of silent failures.
+- News DELETE returns correct 404 for missing resources.
+- Keyboard shortcuts respect contentEditable elements.
+
+Priority Next:
+- Replace custom modals (command-palette, keyboard-help) with Radix Dialog for focus trapping
+- Add CSV escaping in scanner export (double-quote handling)
+- Add pagination to /api/projects for large universes
+- Consider rate limiting on copilot endpoints
