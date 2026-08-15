@@ -22,6 +22,7 @@ import {
   Grid3x3,
   Wallet,
   Bell,
+  FlaskConical,
 } from "lucide-react";
 import { DashboardView } from "./views/dashboard";
 import { ScannerView } from "./views/scanner";
@@ -29,6 +30,7 @@ import { ProjectDetailView } from "./views/project-detail";
 import { CompareView } from "./views/compare";
 import { HeatmapView } from "./views/heatmap";
 import { PortfolioView } from "./views/portfolio";
+import { CustomProjectView } from "./views/custom-project";
 import { SourcesView } from "./views/sources";
 import { NewsView } from "./views/news";
 import { SettingsView } from "./views/settings";
@@ -45,6 +47,7 @@ const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "heatmap", icon: Grid3x3, labelKey: "nav.heatmap" },
   { key: "portfolio", icon: Wallet, labelKey: "nav.portfolio" },
   { key: "alerts", icon: Bell, labelKey: "nav.alerts" },
+  { key: "custom", icon: FlaskConical, labelKey: "nav.custom" },
   { key: "sources", icon: Database, labelKey: "nav.sources" },
   { key: "news", icon: Newspaper, labelKey: "nav.news" },
   { key: "settings", icon: Settings, labelKey: "nav.settings" },
@@ -187,6 +190,7 @@ export function AppShell() {
             <AlertsManager />
           </div>
         )}
+        {view === "custom" && <CustomProjectView />}
         {view === "sources" && <SourcesView />}
         {view === "news" && <NewsView />}
         {view === "settings" && <SettingsView />}

@@ -10,6 +10,7 @@ export type View =
   | "heatmap"
   | "portfolio"
   | "alerts"
+  | "custom"
   | "sources"
   | "news"
   | "settings"
