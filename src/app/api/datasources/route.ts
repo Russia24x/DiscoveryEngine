@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { ADAPTERS } from "@/lib/datasources/registry";
 import { db } from "@/lib/db";
+import { encrypt, decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export async function GET() {
     const persistedMap = new Map(persisted.map((p) => [p.key, p]));
     const list = ADAPTERS.map((a) => {
       const p = persistedMap.get(a.key);
+      const apiKeySet = p?.apiKey ? true : false;
+      // Decrypt the API key to get the real first/last chars for masking.
+      const decryptedKey = p?.apiKey ? decrypt(p.apiKey) : null;
       return {
         key: a.key,
         name: a.name,
@@ -20,8 +24,8 @@ export async function GET() {
         endpoint: a.endpoint,
         coverage: a.coverage,
         enabled: p?.enabled ?? a.type === "free",
-        apiKeySet: p?.apiKey ? true : false,
-        apiKeyMasked: p?.apiKey ? maskKey(p.apiKey) : null,
+        apiKeySet,
+        apiKeyMasked: decryptedKey ? maskKey(decryptedKey) : null,
         lastSync: p?.lastSync ?? null,
       };
     });
@@ -45,7 +49,8 @@ export async function POST(req: Request) {
       endpoint: adapter.endpoint,
       coverage: adapter.coverage,
     };
-    if (apiKey !== undefined) data.apiKey = apiKey;
+    // Encrypt API key at rest before storing in DB.
+    if (apiKey !== undefined) data.apiKey = encrypt(String(apiKey));
     if (enabled !== undefined) data.enabled = enabled;
     const upserted = await db.dataSource.upsert({
       where: { key },

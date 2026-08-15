@@ -23,12 +23,18 @@ export async function POST(req: Request) {
     if (!symbol || !question) {
       return NextResponse.json({ error: "symbol and question required" }, { status: 400 });
     }
+    // Sanitize and limit question length to prevent prompt injection / abuse.
+    const cleanQuestion = String(question).slice(0, 500).trim();
+    if (!cleanQuestion) {
+      return NextResponse.json({ error: "question is empty" }, { status: 400 });
+    }
+    const cleanSymbol = String(symbol).toUpperCase().slice(0, 20).trim();
 
     // Gather full project context.
     const { inputs } = await collectUniverse({ useLive: false });
-    const input = inputs.find((i) => i.symbol === symbol.toUpperCase());
+    const input = inputs.find((i) => i.symbol === cleanSymbol);
     if (!input) {
-      return NextResponse.json({ error: `symbol ${symbol} not in universe` }, { status: 404 });
+      return NextResponse.json({ error: `symbol ${cleanSymbol} not in universe` }, { status: 404 });
     }
 
     const med = median(inputs.map((i) => (i as any).priceChange90d ?? 0)) || 0;
@@ -129,7 +135,7 @@ Format with short paragraphs and bullet points where helpful.`;
     const userPrompt = `Project context (JSON):
 ${JSON.stringify(context, null, 2)}
 
-Question: ${question}
+Question: ${cleanQuestion}
 
 Answer based strictly on the provided context. If the answer isn't in the context, say "I don't have enough data to answer that."`;
 

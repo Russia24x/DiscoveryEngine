@@ -22,12 +22,21 @@ export async function POST(req: Request) {
         headers: { "content-type": "application/json" },
       });
     }
+    // Sanitize and limit question length to prevent prompt injection / abuse.
+    const cleanQuestion = String(question).slice(0, 500).trim();
+    if (!cleanQuestion) {
+      return new Response(JSON.stringify({ error: "question is empty" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    const cleanSymbol = String(symbol).toUpperCase().slice(0, 20).trim();
 
     // Gather full project context.
     const { inputs } = await collectUniverse({ useLive: false });
-    const input = inputs.find((i) => i.symbol === symbol.toUpperCase());
+    const input = inputs.find((i) => i.symbol === cleanSymbol);
     if (!input) {
-      return new Response(JSON.stringify({ error: `symbol ${symbol} not in universe` }), {
+      return new Response(JSON.stringify({ error: `symbol ${cleanSymbol} not in universe` }), {
         status: 404,
         headers: { "content-type": "application/json" },
       });
@@ -68,7 +77,7 @@ Respond concisely (max 250 words). Be direct, analytical, and honest about risks
     const userPrompt = `Project context (JSON):
 ${JSON.stringify(context, null, 2)}
 
-Question: ${question}
+Question: ${cleanQuestion}
 
 Answer based strictly on the provided context.`;
 

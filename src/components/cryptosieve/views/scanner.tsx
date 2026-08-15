@@ -92,7 +92,11 @@ export function ScannerView() {
     } else {
       const sortKey =
         sort === "fundamental" ? "iaRaw" : sort === "confidence" ? "confidence" : sort === "effective" ? "iaEffective" : "iaFinal";
-      arr.sort((a, b) => (b[sortKey as keyof typeof b] as number ?? 0) - (a[sortKey as keyof typeof a] as number ?? 0));
+      arr.sort((a, b) => {
+        const av = Number(a[sortKey as keyof typeof a] ?? 0);
+        const bv = Number(b[sortKey as keyof typeof b] ?? 0);
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+      });
     }
     return arr;
   }, [scanResults, q, sectorFilter, onlyPassed, showRejected, minConf, sort, activePreset]);
@@ -107,6 +111,12 @@ export function ScannerView() {
 
   function exportCsv() {
     if (!filtered.length) return;
+    // Escape CSV values: wrap in quotes, escape internal double-quotes by doubling them.
+    const escapeCsv = (val: any): string => {
+      const s = String(val ?? "");
+      // Escape double-quotes and wrap in quotes to handle commas, newlines, and quotes.
+      return `"${s.replace(/"/g, '""')}"`;
+    };
     const rows = [
       ["symbol", "name", "sector", "iaRaw", "confidence", "iaEffective", "iaFinal", "fundamentalRank", "marketRank", "decision"],
       ...filtered.map((p) => [
@@ -122,8 +132,9 @@ export function ScannerView() {
         p.decision,
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const csv = rows.map((r) => r.map(escapeCsv).join(",")).join("\n");
+    // Add BOM for Excel UTF-8 compatibility.
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
