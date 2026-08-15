@@ -8,6 +8,7 @@ export type View =
   | "project"
   | "compare"
   | "heatmap"
+  | "portfolio"
   | "sources"
   | "news"
   | "settings"

@@ -12,6 +12,7 @@ export const fa: Dictionary = {
     project: "پروژه",
     compare: "مقایسه",
     heatmap: "نقشهٔ حرارتی",
+    portfolio: "پورتفولیو",
     evidence: "شواهد",
     thesis: "تز",
     sources: "منابع داده",

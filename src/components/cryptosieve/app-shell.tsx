@@ -20,16 +20,19 @@ import {
   Github,
   GitCompareArrows,
   Grid3x3,
+  Wallet,
 } from "lucide-react";
 import { DashboardView } from "./views/dashboard";
 import { ScannerView } from "./views/scanner";
 import { ProjectDetailView } from "./views/project-detail";
 import { CompareView } from "./views/compare";
 import { HeatmapView } from "./views/heatmap";
+import { PortfolioView } from "./views/portfolio";
 import { SourcesView } from "./views/sources";
 import { NewsView } from "./views/news";
 import { SettingsView } from "./views/settings";
 import { FrameworkView } from "./views/framework";
+import { CommandPalette } from "./command-palette";
 
 const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
@@ -37,6 +40,7 @@ const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "project", icon: Coins, labelKey: "nav.project" },
   { key: "compare", icon: GitCompareArrows, labelKey: "nav.compare" },
   { key: "heatmap", icon: Grid3x3, labelKey: "nav.heatmap" },
+  { key: "portfolio", icon: Wallet, labelKey: "nav.portfolio" },
   { key: "sources", icon: Database, labelKey: "nav.sources" },
   { key: "news", icon: Newspaper, labelKey: "nav.news" },
   { key: "settings", icon: Settings, labelKey: "nav.settings" },
@@ -94,6 +98,8 @@ export function AppShell() {
           </nav>
 
           <div className="flex items-center gap-1.5 ms-auto md:ms-0">
+            {/* Command palette trigger */}
+            <CommandPalette />
             {/* Locale toggle */}
             <Button
               variant="ghost"
@@ -163,6 +169,7 @@ export function AppShell() {
         {view === "project" && <ProjectDetailView />}
         {view === "compare" && <CompareView />}
         {view === "heatmap" && <HeatmapView />}
+        {view === "portfolio" && <PortfolioView />}
         {view === "sources" && <SourcesView />}
         {view === "news" && <NewsView />}
         {view === "settings" && <SettingsView />}

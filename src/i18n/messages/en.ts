@@ -10,6 +10,7 @@ export const en = {
     project: "Project",
     compare: "Compare",
     heatmap: "Heatmap",
+    portfolio: "Portfolio",
     evidence: "Evidence",
     thesis: "Thesis",
     sources: "Data Sources",
