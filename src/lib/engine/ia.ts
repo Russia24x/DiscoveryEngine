@@ -22,7 +22,9 @@ export function computeIaRaw(input: ProjectInput): number {
 // C ∈ [0.70, 1.00] (or reject if data very incomplete)
 // C = f(Data Completeness, Source Quality, Model Stability)
 export function computeConfidence(input: ProjectInput): number | null {
-  const dc = input.dataCompleteness ?? 0;
+  // Compute data completeness from the input itself (the input.dataCompleteness
+  // field is a placeholder; derive the real value here so confidence is accurate).
+  const dc = computeDataCompleteness(input);
   const sq = input.sourceQuality ?? 0;
   const ms = input.modelStability ?? 0;
 

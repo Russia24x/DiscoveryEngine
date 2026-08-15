@@ -48,8 +48,11 @@ export function getAdapter(key: string): DataSourceAdapter | undefined {
   return ADAPTERS.find((a) => a.key === key);
 }
 
-// Collect a full universe of project inputs, preferring live adapters and
-// falling back to the bundled dataset so the engine ALWAYS has something to rank.
+// Collect a full universe of project inputs.
+// Strategy: the bundle (22 representative projects with full fundamentals) is ALWAYS
+// the base. If live market data is reachable, we overlay live prices/mcaps onto matching
+// bundle projects — giving live prices + proper fundamentals. This guarantees meaningful
+// scores even when only market data (not fundamentals) is available from free APIs.
 export async function collectUniverse(opts?: {
   useLive?: boolean;
   enabledKeys?: string[];
@@ -64,17 +67,18 @@ export async function collectUniverse(opts?: {
   const useLive = opts?.useLive ?? true;
 
   const sourcesUsed: string[] = [];
+  const bundle = getBundleUniverse();
 
-  // 1) Try live market data (CoinGecko).
-  let marketRows: MarketDataRow[] = [];
-  let fundamentalsBySymbol = new Map<string, FundamentalsRow>();
+  // 1) Try live market data (CoinGecko) — used to refresh prices/mcaps on bundle projects.
+  let liveMarketBySymbol = new Map<string, MarketDataRow>();
+  let liveFundamentalsBySymbol = new Map<string, FundamentalsRow>();
 
   if (useLive) {
     const cg = getAdapter("coingecko");
     if (cg && enabled.includes("coingecko")) {
       const rows = await cg.fetchMarketData(undefined, apiKeys.coingecko);
       if (rows.length > 0) {
-        marketRows = rows;
+        liveMarketBySymbol = new Map(rows.map((r) => [r.symbol, r]));
         sourcesUsed.push("coingecko");
       }
     }
@@ -82,33 +86,36 @@ export async function collectUniverse(opts?: {
     if (dl && enabled.includes("defillama")) {
       const fund = await dl.fetchFundamentals(undefined, apiKeys.defillama);
       if (fund.length > 0) {
-        fundamentalsBySymbol = new Map(fund.map((f) => [f.symbol, f]));
+        liveFundamentalsBySymbol = new Map(fund.map((f) => [f.symbol, f]));
         sourcesUsed.push("defillama");
       }
     }
-    const bn = getAdapter("binance");
-    if (bn && enabled.includes("binance")) {
-      // Only used to refine prices for symbols we already have.
-      // (kept lightweight)
-      sourcesUsed.push("binance");
-    }
+    if (enabled.includes("binance")) sourcesUsed.push("binance");
   }
 
-  const live = marketRows.length > 0;
+  const live = liveMarketBySymbol.size > 0;
 
-  if (!live) {
-    // Fallback: bundled dataset.
-    const bundle = getBundleUniverse();
-    const inputs = bundle.map(({ market, fundamentals }) =>
-      toProjectInput(market, fundamentals)
-    );
-    return { inputs, live: false, sourcesUsed: ["bundle"] };
-  }
-
-  // Merge live market + fundamentals.
-  const inputs = marketRows.map((m) => {
-    const f = fundamentalsBySymbol.get(m.symbol);
-    return toProjectInput(m, f);
+  // 2) Build the universe: bundle base, with live market data overlaid where available.
+  const inputs = bundle.map(({ market, fundamentals }) => {
+    // Prefer live fundamentals (DeFiLlama) if present, else bundle fundamentals.
+    const liveFund = liveFundamentalsBySymbol.get(market.symbol);
+    const fund = liveFund ?? fundamentals;
+    // Overlay live market data (price, mcap, fdv, supply) onto the bundle market row.
+    const liveMkt = liveMarketBySymbol.get(market.symbol);
+    const mergedMarket: MarketDataRow = liveMkt
+      ? {
+          ...market,
+          priceUsd: liveMkt.priceUsd ?? market.priceUsd,
+          marketCap: liveMkt.marketCap ?? market.marketCap,
+          fdv: liveMkt.fdv ?? market.fdv,
+          totalSupply: liveMkt.totalSupply ?? market.totalSupply,
+          floatSupply: liveMkt.floatSupply ?? market.floatSupply,
+          logoUrl: liveMkt.logoUrl ?? market.logoUrl,
+          priceChange90d: liveMkt.priceChange90d ?? market.priceChange90d,
+        }
+      : market;
+    return toProjectInput(mergedMarket, fund);
   });
-  return { inputs, live: true, sourcesUsed };
+
+  return { inputs, live, sourcesUsed: live ? sourcesUsed : ["bundle"] };
 }
