@@ -74,8 +74,16 @@ Answer based strictly on the provided context.`;
 
     // Stream via SSE.
     const encoder = new TextEncoder();
+    let cancelled = false;
     const stream = new ReadableStream({
       async start(controller) {
+        // Listen for client disconnect.
+        const abortHandler = () => {
+          cancelled = true;
+          try { controller.close(); } catch {}
+        };
+        req.signal.addEventListener("abort", abortHandler);
+
         try {
           const ZAI = (await import("z-ai-web-dev-sdk")).default;
           const zai = await ZAI.create();
@@ -90,19 +98,29 @@ Answer based strictly on the provided context.`;
           });
 
           for await (const chunk of completion) {
+            if (cancelled) break; // Stop if client disconnected
             const content = (chunk as any).choices?.[0]?.delta?.content ?? "";
             if (content) {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
             }
           }
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          if (!cancelled) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          }
           controller.close();
         } catch (e: any) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: e?.message ?? "stream failed" })}\n\n`)
-          );
-          controller.close();
+          if (!cancelled) {
+            controller.enqueue(
+              encoder.encode(`event: error\ndata: ${JSON.stringify({ error: e?.message ?? "stream failed" })}\n\n`)
+            );
+            controller.close();
+          }
+        } finally {
+          req.signal.removeEventListener("abort", abortHandler);
         }
+      },
+      cancel() {
+        cancelled = true;
       },
     });
 

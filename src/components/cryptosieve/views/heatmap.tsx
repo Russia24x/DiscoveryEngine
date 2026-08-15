@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionBadge } from "../primitives";
 import { cn } from "@/lib/utils";
 import { fmtUsd } from "@/lib/format";
-import { Grid3x3, ChevronDown, ChevronUp } from "lucide-react";
+import { Grid3x3, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Sector {
   sector: string;
@@ -30,16 +31,23 @@ export function HeatmapView() {
   const [sectors, setSectors] = useState<Sector[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/heatmap")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((j) => {
         if (cancelled) return;
         setSectors(j.sectors);
+        setError(null);
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (!cancelled) setError(e?.message ?? "Failed to load heatmap");
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -74,6 +82,17 @@ export function HeatmapView() {
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
+      ) : error ? (
+        <Card className="border-reject/30">
+          <CardContent className="py-12 flex flex-col items-center text-center gap-3">
+            <AlertCircle className="h-8 w-8 text-reject" />
+            <p className="text-sm text-reject font-medium">Failed to load heatmap</p>
+            <p className="text-xs text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : !sectors || sectors.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">

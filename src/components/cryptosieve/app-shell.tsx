@@ -68,7 +68,9 @@ export function AppShell() {
 
     function handler(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
+      // Skip if user is typing in an input, textarea, select, or contentEditable element.
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") return;
+      if (target.isContentEditable) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const key = e.key.toLowerCase();

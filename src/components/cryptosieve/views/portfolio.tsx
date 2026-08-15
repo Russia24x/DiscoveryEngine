@@ -18,7 +18,7 @@ import {
 import { usePortfolio, computePnl, type Position } from "@/lib/portfolio-store";
 import { fmtUsd, fmtPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Briefcase, Plus, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Briefcase, Plus, Trash2, TrendingUp, TrendingDown, Wallet, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface PriceMap {
@@ -37,11 +37,15 @@ export function PortfolioView() {
   }, [load]);
 
   // Fetch current prices for all positions.
+  const [priceError, setPriceError] = useState<string | null>(null);
   useEffect(() => {
     if (positions.length === 0) return;
     let cancelled = false;
     fetch("/api/projects?showRejected=1")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((j) => {
         if (cancelled) return;
         const map: PriceMap = {};
@@ -49,8 +53,11 @@ export function PortfolioView() {
           map[p.symbol] = { price: p.priceUsd, iaFinal: p.iaFinal, decision: p.decision };
         }
         setPrices(map);
+        setPriceError(null);
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (!cancelled) setPriceError(e?.message ?? "Failed to load prices");
+      });
     return () => {
       cancelled = true;
     };
@@ -117,6 +124,14 @@ export function PortfolioView() {
           </CardContent>
         </div>
       </Card>
+
+      {/* Price fetch error */}
+      {priceError && positions.length > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-investigate/30 bg-investigate/5 p-2.5 text-xs">
+          <AlertCircle className="h-3.5 w-3.5 text-investigate shrink-0" />
+          <span className="text-investigate">Prices may be stale: {priceError}</span>
+        </div>
+      )}
 
       {/* Positions list */}
       {positions.length === 0 ? (

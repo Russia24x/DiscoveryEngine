@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const useLive = body?.useLive ?? true;
+    // Coerce useLive to boolean — "false" (string) is truthy, so explicit check needed.
+    const useLive = body?.useLive === false || body?.useLive === "false" ? false : true;
 
     // Collect universe (live or bundled fallback). Skip cache for explicit scans
     // so the user always gets fresh data when they click "Run Scan".

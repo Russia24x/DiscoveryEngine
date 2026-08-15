@@ -6,25 +6,29 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Merge static adapter definitions with persisted config (apiKey, enabled).
-  const persisted = await db.dataSource.findMany();
-  const persistedMap = new Map(persisted.map((p) => [p.key, p]));
-  const list = ADAPTERS.map((a) => {
-    const p = persistedMap.get(a.key);
-    return {
-      key: a.key,
-      name: a.name,
-      type: a.type,
-      requiresKey: a.requiresKey,
-      endpoint: a.endpoint,
-      coverage: a.coverage,
-      enabled: p?.enabled ?? a.type === "free",
-      apiKeySet: p?.apiKey ? true : false,
-      apiKeyMasked: p?.apiKey ? maskKey(p.apiKey) : null,
-      lastSync: p?.lastSync ?? null,
-    };
-  });
-  return NextResponse.json({ sources: list });
+  try {
+    // Merge static adapter definitions with persisted config (apiKey, enabled).
+    const persisted = await db.dataSource.findMany();
+    const persistedMap = new Map(persisted.map((p) => [p.key, p]));
+    const list = ADAPTERS.map((a) => {
+      const p = persistedMap.get(a.key);
+      return {
+        key: a.key,
+        name: a.name,
+        type: a.type,
+        requiresKey: a.requiresKey,
+        endpoint: a.endpoint,
+        coverage: a.coverage,
+        enabled: p?.enabled ?? a.type === "free",
+        apiKeySet: p?.apiKey ? true : false,
+        apiKeyMasked: p?.apiKey ? maskKey(p.apiKey) : null,
+        lastSync: p?.lastSync ?? null,
+      };
+    });
+    return NextResponse.json({ sources: list });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

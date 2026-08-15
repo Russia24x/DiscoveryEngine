@@ -65,12 +65,17 @@ export function CompareView() {
     }
     let cancelled = false;
     fetch("/api/projects?showRejected=1")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((j) => {
         if (cancelled) return;
         setAvailable(j.projects ?? []);
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (!cancelled) toast.error(`Failed to load projects: ${e?.message}`);
+      });
     return () => {
       cancelled = true;
     };

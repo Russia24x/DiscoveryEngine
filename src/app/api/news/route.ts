@@ -5,11 +5,15 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const sources = await db.newsSource.findMany({
-    include: { items: { orderBy: { publishedAt: "desc" }, take: 10 } },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json({ sources });
+  try {
+    const sources = await db.newsSource.findMany({
+      include: { items: { orderBy: { publishedAt: "desc" }, take: 10 } },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({ sources });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -50,7 +54,15 @@ export async function DELETE(req: Request) {
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-    await db.newsSource.delete({ where: { id } });
+    try {
+      await db.newsSource.delete({ where: { id } });
+    } catch (e: any) {
+      // Prisma P2025 = record not found
+      if (e?.code === "P2025") {
+        return NextResponse.json({ error: "Feed not found" }, { status: 404 });
+      }
+      throw e;
+    }
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });

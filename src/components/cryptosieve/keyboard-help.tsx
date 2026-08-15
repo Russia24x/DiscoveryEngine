@@ -27,6 +27,7 @@ export function KeyboardHelp() {
       // Don't trigger if user is typing in an input.
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") return;
+      if (target.isContentEditable) return;
 
       if (e.key === "?" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
