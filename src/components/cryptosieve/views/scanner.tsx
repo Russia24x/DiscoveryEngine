@@ -26,6 +26,7 @@ export function ScannerView() {
   const [onlyPassed, setOnlyPassed] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const [minConf, setMinConf] = useState(0);
+  const [sectorFilter, setSectorFilter] = useState<string>("all");
 
   async function runScan() {
     setScanning(true);
@@ -65,6 +66,7 @@ export function ScannerView() {
         (p) => p.symbol.toLowerCase().includes(s) || p.name?.toLowerCase().includes(s) || p.sector?.toLowerCase().includes(s)
       );
     }
+    if (sectorFilter !== "all") arr = arr.filter((p) => p.sector === sectorFilter);
     if (onlyPassed) arr = arr.filter((p) => p.gatePassed);
     if (!showRejected) arr = arr.filter((p) => p.decision !== "REJECT");
     if (minConf > 0) arr = arr.filter((p) => (p.confidence ?? 0) >= minConf);
@@ -72,7 +74,15 @@ export function ScannerView() {
       sort === "fundamental" ? "iaRaw" : sort === "confidence" ? "confidence" : sort === "effective" ? "iaEffective" : "iaFinal";
     arr.sort((a, b) => (b[sortKey as keyof typeof b] as number ?? 0) - (a[sortKey as keyof typeof a] as number ?? 0));
     return arr;
-  }, [scanResults, q, onlyPassed, showRejected, minConf, sort]);
+  }, [scanResults, q, sectorFilter, onlyPassed, showRejected, minConf, sort]);
+
+  // Extract unique sectors for the filter dropdown.
+  const sectors = useMemo(() => {
+    if (!scanResults) return [];
+    const set = new Set<string>();
+    scanResults.forEach((p) => { if (p.sector) set.add(p.sector); });
+    return Array.from(set).sort();
+  }, [scanResults]);
 
   function exportCsv() {
     if (!filtered.length) return;
@@ -183,6 +193,33 @@ export function ScannerView() {
               </Button>
             ))}
           </div>
+          {/* Sector filter */}
+          {sectors.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+              <button
+                onClick={() => setSectorFilter("all")}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
+                  sectorFilter === "all" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                All
+              </button>
+              {sectors.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSectorFilter(s)}
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap",
+                    sectorFilter === s ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-4 text-xs">
             <label className="flex items-center gap-2 cursor-pointer">
               <Switch checked={onlyPassed} onCheckedChange={setOnlyPassed} className="scale-90" />
