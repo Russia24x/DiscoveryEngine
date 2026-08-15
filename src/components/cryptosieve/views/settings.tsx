@@ -1,14 +1,17 @@
 "use client";
 
+import { useRef } from "react";
 import { useI18n } from "@/i18n/provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Languages, Palette, Info, FileText, Shield } from "lucide-react";
+import { Languages, Palette, Info, FileText, Shield, Download, Upload, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { handleExport, handleImport } from "@/lib/data-io";
 
 export function SettingsView() {
   const { t, locale, setLocale, theme, setTheme } = useI18n();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
@@ -97,6 +100,40 @@ export function SettingsView() {
                 <Shield className="h-3.5 w-3.5" /> {t.settings.viewRules}
               </a>
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Database className="h-4 w-4 text-primary" />
+            Data Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Export your watchlist, portfolio, and alert rules to a JSON backup file. Import to restore on another device.
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" /> Export Backup
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" /> Import Backup
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file);
+                e.target.value = "";
+              }}
+            />
           </div>
         </CardContent>
       </Card>

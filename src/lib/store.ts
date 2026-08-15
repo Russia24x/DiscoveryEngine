@@ -9,6 +9,7 @@ export type View =
   | "compare"
   | "heatmap"
   | "portfolio"
+  | "alerts"
   | "sources"
   | "news"
   | "settings"

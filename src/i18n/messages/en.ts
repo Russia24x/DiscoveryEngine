@@ -11,6 +11,7 @@ export const en = {
     compare: "Compare",
     heatmap: "Heatmap",
     portfolio: "Portfolio",
+    alerts: "Alerts",
     evidence: "Evidence",
     thesis: "Thesis",
     sources: "Data Sources",

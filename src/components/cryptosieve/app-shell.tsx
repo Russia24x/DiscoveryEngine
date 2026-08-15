@@ -21,6 +21,7 @@ import {
   GitCompareArrows,
   Grid3x3,
   Wallet,
+  Bell,
 } from "lucide-react";
 import { DashboardView } from "./views/dashboard";
 import { ScannerView } from "./views/scanner";
@@ -33,6 +34,7 @@ import { NewsView } from "./views/news";
 import { SettingsView } from "./views/settings";
 import { FrameworkView } from "./views/framework";
 import { CommandPalette } from "./command-palette";
+import { AlertsBell, AlertsManager } from "./alerts";
 
 const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
@@ -41,6 +43,7 @@ const NAV: { key: View; icon: any; labelKey: string }[] = [
   { key: "compare", icon: GitCompareArrows, labelKey: "nav.compare" },
   { key: "heatmap", icon: Grid3x3, labelKey: "nav.heatmap" },
   { key: "portfolio", icon: Wallet, labelKey: "nav.portfolio" },
+  { key: "alerts", icon: Bell, labelKey: "nav.alerts" },
   { key: "sources", icon: Database, labelKey: "nav.sources" },
   { key: "news", icon: Newspaper, labelKey: "nav.news" },
   { key: "settings", icon: Settings, labelKey: "nav.settings" },
@@ -100,6 +103,8 @@ export function AppShell() {
           <div className="flex items-center gap-1.5 ms-auto md:ms-0">
             {/* Command palette trigger */}
             <CommandPalette />
+            {/* Alerts bell */}
+            <AlertsBell />
             {/* Locale toggle */}
             <Button
               variant="ghost"
@@ -170,6 +175,11 @@ export function AppShell() {
         {view === "compare" && <CompareView />}
         {view === "heatmap" && <HeatmapView />}
         {view === "portfolio" && <PortfolioView />}
+        {view === "alerts" && (
+          <div className="p-4 md:p-6 max-w-4xl mx-auto">
+            <AlertsManager />
+          </div>
+        )}
         {view === "sources" && <SourcesView />}
         {view === "news" && <NewsView />}
         {view === "settings" && <SettingsView />}

@@ -13,6 +13,7 @@ export const fa: Dictionary = {
     compare: "مقایسه",
     heatmap: "نقشهٔ حرارتی",
     portfolio: "پورتفولیو",
+    alerts: "هشدارها",
     evidence: "شواهد",
     thesis: "تز",
     sources: "منابع داده",
