@@ -66,9 +66,6 @@ server.log
 # Uploads (user-provided scratch files)
 /upload/
 
-# Sandbox scripts
-/.zscripts/
-
 # Screenshots & watchdog artifacts
 screenshot-*.png
 .watchdog.log
