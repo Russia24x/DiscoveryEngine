@@ -52,3 +52,35 @@ Priority Next (per FRAMEWORK.md §15):
 - v1.2: Historical Score (روند IA در زمان)، Percentile Engine غنی‌تر.
 - افزودن RSS feed fetcher واقعی برای News view.
 - افزودن نمودارهای recharts برای روند PQ/TQ/IA.
+
+---
+
+Task ID: 2
+Agent: main (cron webDevReview)
+Task: QA testing + v1.1 Evidence Graph + v1.2 Historical Trends + Separation Cards + RSS fetcher
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: dashboard, scanner, project detail, framework view all working. No console errors. Scanner shows 22 ranked projects (HYPE #1, MKR #2, AERO #3). Project detail renders IA pipeline, VAE chain, gates, thesis, peer benchmark.
+- v1.1 Evidence Graph (FRAMEWORK.md §10):
+  - New engine module `src/lib/engine/evidence.ts`: buildEvidenceGraph() generates real evidence claims with source, timestamp, freshness, confidence, grade (A/B/C), direction, weight, category, contradiction links.
+  - Metric nodes with historical + trend + mini sparkline. Risk nodes with severity + status. Contradiction auto-detection (e.g. revenue up but VAE low → contradiction).
+  - Summary: strongest/weakest claim, avg confidence, avg grade.
+  - New component `EvidenceGraphView`: summary strip, contradiction alerts, claim cards grid, metric sparklines, risk bars.
+- v1.1 Separation Cards (FRAMEWORK.md §3): Project ≠ Token ≠ Investment. 4 prominent score cards + verdict bar classifying alignment.
+- v1.2 Historical Score Trends: generateHistoricalScores() (deterministic 90d trend per symbol), HistoricalTrendChart with recharts (area + line modes, metric selector chips, delta indicator).
+- News & Social: real RSS fetcher (no external dep), POST /api/news/sync endpoint, default feeds + sync buttons in UI.
+- i18n: added evidence.*, separation.*, historical.* keys (en + fa RTL).
+- Lint clean (0 errors). Committed + pushed to GitHub (4d28065).
+
+Stage Summary:
+- v1.1 + v1.2 roadmap items delivered. Project detail now shows: header → SeparationCards → IA Pipeline + Decision → 5 gauges → HistoricalTrendChart → VAE chain + Supply → Gates → Peer Benchmark → Thesis → EvidenceGraphView.
+- Verified HYPE: separation verdict 'Mixed signals — investigate further', 7 evidence claims (6 positive, avg grade A), strongest claim 'VAE 32%', historical trend chart with 7 series.
+- No browser console errors.
+
+Priority Next (per FRAMEWORK.md §15):
+- v1.3: Tokenomics/Unlock Engine deepening + Capital Flow / Smart Money evidence
+- v1.4: Catalyst Engine (catalyst calendar) + Kill Conditions tracking
+- v2.0: AI Research Copilot + Continuous Monitoring + Automatic Thesis Updates
+- Add more data sources (CoinMarketCap key-based when key provided)
+- Persist historical scores per scan for real trend tracking (currently synthetic)
