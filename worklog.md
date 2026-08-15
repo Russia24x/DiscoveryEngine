@@ -84,3 +84,44 @@ Priority Next (per FRAMEWORK.md §15):
 - v2.0: AI Research Copilot + Continuous Monitoring + Automatic Thesis Updates
 - Add more data sources (CoinMarketCap key-based when key provided)
 - Persist historical scores per scan for real trend tracking (currently synthetic)
+
+---
+
+Task ID: 3
+Agent: main (cron webDevReview)
+Task: QA testing + v1.3 Tokenomics/Unlock Engine + v1.3 Capital Flow/Smart Money + v1.4 Catalyst/Kill Conditions + styling polish
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: dashboard, scanner, project detail all working. No console errors. Verified v1.1/v1.2 features (Evidence Graph, Separation Cards, Historical Trends) rendering correctly.
+- v1.3 Tokenomics & Unlock Schedule Engine (FRAMEWORK.md §15):
+  - New engine module `src/lib/engine/tokenomics.ts`: buildTokenomicsSchedule() projects 12-month unlock + dilution with front-loaded vesting curve. Monthly events with unlockUsd, emissionUsd, buybackUsd, netPressureUsd, netPressurePctOfFloat, cumulativeDilution, pressureLevel (low/moderate/high/extreme).
+  - TokenomicsVerdict: healthy/acceptable/concerning/dangerous with composite score (dilution + absorption + pressure + peak).
+  - Risk gates: dilution>30%, dilution>50%, SAR<0.1, peak>8%, avg>3%.
+  - New component `TokenomicsView`: verdict header, 4 key metric cards, 12-month bar chart with hover tooltips, legend, totals, risk gates panel.
+- v1.3 Capital Flow / Smart Money (Nansen-style):
+  - New engine module `src/lib/engine/capital-flow.ts`: buildCapitalFlowProfile() generates 5 signals (smart money, whale accumulation, exchange flow, insider concentration, long-term holders) with direction, strength, grade. Composite score (-100 to +100), verdict (strong inflow → strong outflow). Deterministic per-symbol.
+  - New component `CapitalFlowView`: half-gauge composite, signal bars with strength meters, direction icons, evidence grades.
+- v1.4 Catalyst Calendar & Kill Conditions:
+  - New engine module `src/lib/engine/catalyst.ts`: buildCatalystReport() generates upcoming catalysts (unlock, upgrade, governance, earnings, partnership, regulatory, launch) with impact/probability/magnitude. Kill conditions (VAE<10, revenue<0, risk>90, dilution>50%, insider>80%) with safe/watch/triggered status + margin. Risk level: low/moderate/elevated/high.
+  - New component `CatalystView`: verdict header, catalyst timeline with day countdown, kill conditions with margin bars.
+- Styling improvements:
+  - New `DecisionDonut` component: arc-segment donut chart for PASS/INVESTIGATE/REJECT distribution.
+  - Scanner: replaced flat stats strip with rich donut card + stats grid.
+  - Dashboard hero: added pipeline formula strip (Gate → PQ → ... → IA_final), 'assets tracked' badge, avg confidence display.
+- i18n: added tokenomics.*, capitalFlow.*, catalyst.* keys (en + fa RTL).
+- API: project-detail now returns tokenomics, capitalFlow, catalystReport.
+- Lint clean (0 errors). Committed + pushed (9673a10, 6cabeb5).
+
+Stage Summary:
+- v1.3 + v1.4 roadmap items delivered. Project detail now shows: Header → SeparationCards → IA Pipeline + Decision → 5 gauges → HistoricalTrendChart → VAE chain + Supply → TokenomicsView → Gates → Peer Benchmark → Thesis → EvidenceGraphView → CapitalFlowView → CatalystView.
+- Verified HYPE: tokenomics healthy (score=86, SAR=6.00, dilution=13.5%, 12 monthly events), capital flow moderate_inflow (+15, 3 inflows/0 outflows, 5 signals), catalyst risk=low (3 catalysts, 5 kill conditions, 0 triggered).
+- Scanner shows decision donut. Dashboard shows pipeline strip + assets tracked + avg confidence.
+- No browser console errors.
+
+Priority Next (per FRAMEWORK.md §15):
+- v2.0: AI Research Copilot + Continuous Monitoring + Automatic Thesis Updates
+- Persist historical scores per scan for real trend tracking (currently synthetic)
+- Add real on-chain data sources for Capital Flow (Etherscan, Glassnode when key available)
+- Add price chart with technical indicators to project detail
+- Add portfolio/watchlist feature with alerts
