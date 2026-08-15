@@ -43,27 +43,97 @@ export function CopilotChat({ symbol }: { symbol: string }) {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+
+    // Add an empty assistant message that we'll stream into.
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
     try {
-      const res = await fetch("/api/copilot", {
+      // Try streaming first.
+      const res = await fetch("/api/copilot-stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ symbol, question }),
       });
-      const j = await res.json();
+
+      if (res.ok && res.headers.get("content-type")?.includes("text/event-stream")) {
+        const reader = res.body?.getReader();
+        if (reader) {
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let fullContent = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6).trim();
+                if (data === "[DONE]") continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.error) {
+                    setMessages((prev) => {
+                      const next = [...prev];
+                      next[next.length - 1] = { role: "assistant", content: parsed.error, error: true };
+                      return next;
+                    });
+                    toast.error(parsed.error);
+                    return;
+                  }
+                  if (parsed.content) {
+                    fullContent += parsed.content;
+                    setMessages((prev) => {
+                      const next = [...prev];
+                      next[next.length - 1] = { role: "assistant", content: fullContent };
+                      return next;
+                    });
+                  }
+                } catch {}
+              }
+            }
+          }
+
+          // If streaming produced content, we're done.
+          if (fullContent) {
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Fall back to non-streaming if streaming produced no content.
+      const fallbackRes = await fetch("/api/copilot", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ symbol, question }),
+      });
+      const j = await fallbackRes.json();
       if (j.ok) {
-        setMessages((prev) => [...prev, { role: "assistant", content: j.answer }]);
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = { role: "assistant", content: j.answer };
+          return next;
+        });
       } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: j.error ?? "AI request failed", error: true },
-        ]);
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = { role: "assistant", content: j.error ?? "AI request failed", error: true };
+          return next;
+        });
         toast.error(j.error ?? "AI request failed");
       }
     } catch (e: any) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: e?.message ?? "Network error", error: true },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        if (next.length > 0 && next[next.length - 1].role === "assistant" && next[next.length - 1].content === "") {
+          next[next.length - 1] = { role: "assistant", content: e?.message ?? "Network error", error: true };
+        }
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -89,9 +159,9 @@ export function CopilotChat({ symbol }: { symbol: string }) {
         {messages.length > 0 ? (
           <div ref={scrollRef} className="space-y-2.5 max-h-72 overflow-y-auto scrollbar-thin pe-1">
             {messages.map((m, i) => (
-              <MessageBubble key={i} message={m} />
+              <MessageBubble key={i} message={m} streaming={loading && i === messages.length - 1 && m.role === "assistant"} />
             ))}
-            {loading && (
+            {loading && messages[messages.length - 1]?.content === "" && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Bot className="h-4 w-4 text-primary animate-pulse" />
                 <span className="animate-pulse-soft">AI is analyzing…</span>
@@ -141,10 +211,10 @@ export function CopilotChat({ symbol }: { symbol: string }) {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, streaming }: { message: Message; streaming?: boolean }) {
   const isUser = message.role === "user";
   return (
-    <div className={cn("flex gap-2", isUser && "flex-row-reverse")}>
+    <div className={cn("flex gap-2 animate-fade-up", isUser && "flex-row-reverse")}>
       <div
         className={cn(
           "h-7 w-7 rounded-full flex items-center justify-center shrink-0",
@@ -156,7 +226,7 @@ function MessageBubble({ message }: { message: Message }) {
         ) : message.error ? (
           <AlertCircle className="h-3.5 w-3.5 text-reject" />
         ) : (
-          <Bot className="h-3.5 w-3.5 text-primary" />
+          <Bot className={cn("h-3.5 w-3.5 text-primary", streaming && "animate-pulse")} />
         )}
       </div>
       <div
@@ -169,7 +239,12 @@ function MessageBubble({ message }: { message: Message }) {
             : "bg-muted/50 text-foreground"
         )}
       >
-        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        <p className="whitespace-pre-wrap leading-relaxed">
+          {message.content}
+          {streaming && message.content && (
+            <span className="inline-block w-1.5 h-3 bg-primary ms-0.5 animate-pulse align-middle" />
+          )}
+        </p>
       </div>
     </div>
   );

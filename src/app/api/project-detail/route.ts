@@ -36,26 +36,53 @@ export async function GET(req: Request) {
     // v1.1: Build the Evidence Graph (real claims with sources, freshness, grades, contradictions).
     const evidenceGraph = buildEvidenceGraph(input, scores);
 
-    // v1.2: Historical score trends for recharts.
-    const historical = generateHistoricalScores(input.symbol, {
-      pq: scores.components.pq,
-      tq: scores.components.tq,
-      va: scores.components.va,
-      v: scores.components.v,
-      iaRaw: scores.iaRaw,
-      iaEffective: scores.iaEffective,
-      iaFinal: scores.iaFinal,
+    // v1.2: Historical score trends — prefer real persisted scores, fall back to synthetic.
+    const realHistory = await db.historicalScore.findMany({
+      where: { symbol },
+      orderBy: { recordedAt: "asc" },
+      take: 20,
     });
-    const labels = ["90d", "60d", "30d", "14d", "7d", "now"];
-    const historicalSeries = [
-      { key: "pq", label: "Project Quality", data: historical[0].points, labels },
-      { key: "tq", label: "Token Quality", data: historical[1].points, labels },
-      { key: "va", label: "Value Accrual", data: historical[2].points, labels },
-      { key: "v", label: "Valuation", data: historical[3].points, labels },
-      { key: "iaRaw", label: "IA Raw", data: historical[4].points, labels },
-      { key: "iaEffective", label: "IA Effective", data: historical[5].points, labels },
-      { key: "iaFinal", label: "IA Final", data: historical[6].points, labels },
-    ];
+
+    let historicalSeries: any[];
+    if (realHistory.length >= 2) {
+      // Use real persisted scores — pad to at least 6 points by repeating first.
+      const padded = padHistory(realHistory, 6);
+      const labels = padded.map((_, i) => {
+        if (i === padded.length - 1) return "now";
+        const ago = Math.round((padded.length - 1 - i) * (realHistory.length / padded.length));
+        return `${ago}scans`;
+      });
+      historicalSeries = [
+        { key: "pq", label: "Project Quality", data: padded.map((h) => h.pq ?? 0), labels },
+        { key: "tq", label: "Token Quality", data: padded.map((h) => h.tq ?? 0), labels },
+        { key: "va", label: "Value Accrual", data: padded.map((h) => h.va ?? 0), labels },
+        { key: "v", label: "Valuation", data: padded.map((h) => h.v ?? 0), labels },
+        { key: "iaRaw", label: "IA Raw", data: padded.map((h) => h.iaRaw ?? 0), labels },
+        { key: "iaEffective", label: "IA Effective", data: padded.map((h) => h.iaEffective ?? 0), labels },
+        { key: "iaFinal", label: "IA Final", data: padded.map((h) => h.iaFinal ?? 0), labels },
+      ];
+    } else {
+      // Fall back to synthetic for projects with <2 real scans.
+      const historical = generateHistoricalScores(input.symbol, {
+        pq: scores.components.pq,
+        tq: scores.components.tq,
+        va: scores.components.va,
+        v: scores.components.v,
+        iaRaw: scores.iaRaw,
+        iaEffective: scores.iaEffective,
+        iaFinal: scores.iaFinal,
+      });
+      const labels = ["90d", "60d", "30d", "14d", "7d", "now"];
+      historicalSeries = [
+        { key: "pq", label: "Project Quality", data: historical[0].points, labels },
+        { key: "tq", label: "Token Quality", data: historical[1].points, labels },
+        { key: "va", label: "Value Accrual", data: historical[2].points, labels },
+        { key: "v", label: "Valuation", data: historical[3].points, labels },
+        { key: "iaRaw", label: "IA Raw", data: historical[4].points, labels },
+        { key: "iaEffective", label: "IA Effective", data: historical[5].points, labels },
+        { key: "iaFinal", label: "IA Final", data: historical[6].points, labels },
+      ];
+    }
 
     // v1.1: Separation scores — Project Quality vs Token Quality vs Valuation vs Investment Attractiveness.
     const separation = {
@@ -145,4 +172,12 @@ function median(arr: number[]): number {
   const s = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// Pad historical scores to at least `min` points by repeating the first entry.
+function padHistory<T>(arr: T[], min: number): T[] {
+  if (arr.length >= min) return arr.slice(-min);
+  const first = arr[0];
+  const padding = Array(min - arr.length).fill(first);
+  return [...padding, ...arr];
 }
