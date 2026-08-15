@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Rss, Send, Twitter, Trash2, Plus } from "lucide-react";
+import { Newspaper, Rss, Send, Twitter, Trash2, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/format";
@@ -20,6 +20,7 @@ export function NewsView() {
   const [type, setType] = useState("rss");
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   async function load() {
     const r = await fetch("/api/news");
@@ -55,15 +56,60 @@ export function NewsView() {
     await fetch(`/api/news?id=${id}`, { method: "DELETE" });
     load();
   }
+  async function syncFeeds() {
+    setSyncing(true);
+    try {
+      const r = await fetch("/api/news/sync", { method: "POST" });
+      const j = await r.json();
+      if (j.ok) {
+        toast.success(`Synced ${j.totalFetched} items from ${j.sources.length} feeds`);
+      } else {
+        toast.error(j.error ?? "Sync failed");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setSyncing(false);
+      load();
+    }
+  }
+  async function addDefaultFeeds() {
+    const defaults = [
+      { type: "rss", url: "https://cointelegraph.com/rss", label: "Cointelegraph" },
+      { type: "rss", url: "https://bitcoinist.com/feed/", label: "Bitcoinist" },
+      { type: "rss", url: "https://news.bitcoin.com/feed/", label: "Bitcoin.com News" },
+      { type: "rss", url: "https://www.theblock.co/rss.xml", label: "The Block" },
+    ];
+    for (const d of defaults) {
+      await fetch("/api/news", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(d),
+      });
+    }
+    toast.success("Default feeds added");
+    load();
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-          <Newspaper className="h-5 w-5 text-primary" />
-          {t.news.title}
-        </h1>
-        <p className="text-xs text-muted-foreground">{t.news.subtitle}</p>
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <Newspaper className="h-5 w-5 text-primary" />
+            {t.news.title}
+          </h1>
+          <p className="text-xs text-muted-foreground">{t.news.subtitle}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={addDefaultFeeds} className="gap-1.5 text-xs">
+            <Plus className="h-3.5 w-3.5" /> Default feeds
+          </Button>
+          <Button size="sm" onClick={syncFeeds} disabled={syncing} className="gap-1.5 text-xs">
+            <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+            {syncing ? "Syncing…" : "Sync feeds"}
+          </Button>
+        </div>
       </div>
 
       {/* Add feed */}

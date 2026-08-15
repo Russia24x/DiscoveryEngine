@@ -9,6 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScoreGauge, MetricBar, DecisionBadge, RankBadge, GatePill } from "../primitives";
+import { EvidenceGraphView } from "../evidence-graph";
+import { SeparationCards } from "../separation-cards";
+import { HistoricalTrendChart } from "../historical-trend";
 import { fmtUsd, fmtNum, fmtPct } from "@/lib/format";
 import {
   ArrowLeft,
@@ -42,6 +45,9 @@ interface Detail {
   ranks: any;
   peer: any;
   thesis: any;
+  evidenceGraph?: any;
+  historicalSeries?: any[];
+  separation?: any;
   evidences: any[];
   risks: any[];
 }
@@ -182,6 +188,9 @@ function ProjectDetailBody({ data }: { data: Detail }) {
         </div>
       </Card>
 
+      {/* v1.1: Separation cards — Project ≠ Token ≠ Investment */}
+      {data.separation && <SeparationCards data={data.separation} />}
+
       {/* IA Pipeline + Decision */}
       <div className="grid lg:grid-cols-3 gap-4">
         {/* IA pipeline */}
@@ -253,6 +262,11 @@ function ProjectDetailBody({ data }: { data: Detail }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* v1.2: Historical score trend */}
+      {data.historicalSeries && data.historicalSeries.length > 0 && (
+        <HistoricalTrendChart series={data.historicalSeries} />
+      )}
 
       {/* VAE chain + Supply metrics */}
       <div className="grid md:grid-cols-2 gap-4">
@@ -396,29 +410,19 @@ function ProjectDetailBody({ data }: { data: Detail }) {
         </Card>
       )}
 
-      {/* Evidence */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t.evidence.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.evidences.length === 0 ? (
+      {/* v1.1: Evidence Graph (real claims with sources, freshness, grades, contradictions) */}
+      {data.evidenceGraph ? (
+        <EvidenceGraphView graph={data.evidenceGraph} />
+      ) : (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t.evidence.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <p className="text-xs text-muted-foreground py-4">{t.evidence.noEvidence}</p>
-          ) : (
-            <div className="space-y-2">
-              {data.evidences.map((e) => (
-                <div key={e.id} className="flex items-start gap-2 rounded-lg border border-border p-2.5 text-xs">
-                  <Badge variant="outline" className="text-[10px]">{e.type}</Badge>
-                  <div className="flex-1">
-                    <div className="font-medium">{e.title}</div>
-                    {e.source && <div className="text-muted-foreground text-[10px]">{e.source}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

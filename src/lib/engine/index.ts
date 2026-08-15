@@ -17,6 +17,7 @@ export { computeIaRaw, computeConfidence, computeDataCompleteness } from "./ia";
 export { computeMarketRegime } from "./types";
 export { evaluateThesis } from "./thesis";
 export { benchmarkUniverse, relativeAttractiveness, percentileRank } from "./peer-benchmark";
+export { buildEvidenceGraph, generateHistoricalScores } from "./evidence";
 
 // Score a single project. marketRegime (M) is computed universe-wide and passed in.
 export function scoreProject(

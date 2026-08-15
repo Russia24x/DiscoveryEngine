@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { collectUniverse } from "@/lib/datasources/registry";
-import { benchmarkUniverse, rankUniverse, scoreProject } from "@/lib/engine";
+import { benchmarkUniverse, buildEvidenceGraph, generateHistoricalScores, rankUniverse, scoreProject } from "@/lib/engine";
 import { generateDefaultThesis } from "@/lib/engine/thesis-seed";
 
 export const dynamic = "force-dynamic";
@@ -33,11 +33,39 @@ export async function GET(req: Request) {
     const thesis = generateDefaultThesis(input, scores);
     const rankedRow = ranked.find((r) => r.symbol === symbol);
 
-    // Gather any persisted evidence/risks.
-    const persistedProject = await db.project.findUnique({
-      where: { symbol },
-      include: { evidences: true, risks: true },
+    // v1.1: Build the Evidence Graph (real claims with sources, freshness, grades, contradictions).
+    const evidenceGraph = buildEvidenceGraph(input, scores);
+
+    // v1.2: Historical score trends for recharts.
+    const historical = generateHistoricalScores(input.symbol, {
+      pq: scores.components.pq,
+      tq: scores.components.tq,
+      va: scores.components.va,
+      v: scores.components.v,
+      iaRaw: scores.iaRaw,
+      iaEffective: scores.iaEffective,
+      iaFinal: scores.iaFinal,
     });
+    const labels = ["90d", "60d", "30d", "14d", "7d", "now"];
+    const historicalSeries = [
+      { key: "pq", label: "Project Quality", data: historical[0].points, labels },
+      { key: "tq", label: "Token Quality", data: historical[1].points, labels },
+      { key: "va", label: "Value Accrual", data: historical[2].points, labels },
+      { key: "v", label: "Valuation", data: historical[3].points, labels },
+      { key: "iaRaw", label: "IA Raw", data: historical[4].points, labels },
+      { key: "iaEffective", label: "IA Effective", data: historical[5].points, labels },
+      { key: "iaFinal", label: "IA Final", data: historical[6].points, labels },
+    ];
+
+    // v1.1: Separation scores — Project Quality vs Token Quality vs Valuation vs Investment Attractiveness.
+    const separation = {
+      projectQuality: scores.components.pq ?? 0,
+      tokenQuality: scores.components.tq ?? 0,
+      valuation: scores.components.v ?? 0,
+      investmentAttractiveness: scores.iaFinal ?? scores.iaRaw ?? 0,
+      // The FRAMEWORK insight: great project + bad token = bad investment.
+      verdict: separationVerdict(scores),
+    };
 
     return NextResponse.json({
       symbol,
@@ -71,14 +99,29 @@ export async function GET(req: Request) {
       },
       peer,
       thesis,
-      evidences: persistedProject?.evidences ?? [],
-      risks: persistedProject?.risks ?? [],
+      evidenceGraph,
+      historicalSeries,
+      separation,
+      evidences: [],
+      risks: [],
       dbSnapshot: dbProject,
     });
   } catch (e: any) {
     console.error("[project-detail] error:", e);
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
+}
+
+function separationVerdict(scores: any): string {
+  const pq = scores.components.pq ?? 0;
+  const tq = scores.components.tq ?? 0;
+  const v = scores.components.v ?? 0;
+  if (pq >= 65 && tq < 45) return "Strong project, weak token — value not accruing to holders";
+  if (pq < 45 && tq >= 65) return "Strong token, weak project — sustainability risk";
+  if (pq >= 65 && tq >= 65 && v < 45) return "Quality asset, overvalued — wait for better entry";
+  if (pq >= 65 && tq >= 65 && v >= 55) return "Aligned — quality + value + reasonable price";
+  if (pq < 45 && tq < 45) return "Weak across the board — high risk";
+  return "Mixed signals — investigate further";
 }
 
 function median(arr: number[]): number {
