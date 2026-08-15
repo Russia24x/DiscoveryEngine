@@ -361,3 +361,36 @@ Priority Next:
 - Mobile responsive refinements
 - Performance optimizations for large universes
 - Add keyboard shortcuts help overlay
+
+---
+
+Task ID: 11
+Agent: main (cron webDevReview)
+Task: QA testing + scanner presets + density toggle + keyboard shortcuts
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 12 views rendering correctly. No console errors.
+- Scanner Presets:
+  - Added 6 quick filter presets: All, Top Gainers, Undervalued, High VAE, Low Risk, High Confidence.
+  - Each preset filters and sorts results (e.g. Top Gainers: revenueGrowth >= 20, sorted desc).
+  - Preset chips appear above the filters card. Active preset highlighted.
+  - Sort buttons hidden when a preset is active.
+- Scanner Density Toggle:
+  - Added density toggle button (Rows3/Rows4 icon) to switch between comfortable and compact row heights.
+- Keyboard Shortcuts Help Overlay:
+  - New component `KeyboardHelp`: press ? to toggle a help overlay showing all keyboard shortcuts with kbd styling.
+  - Shortcuts: Cmd+K (search), ? (help), Esc (close), G+D/S/P/C/H/A/F/N (navigate views), T (toggle theme), L (toggle language).
+  - G+key navigation implemented in AppShell with 800ms timeout window.
+  - T and L shortcuts for theme/language switching.
+- Lint clean (0 errors). Committed + pushed (1edff3a).
+
+Stage Summary:
+- Scanner now has 6 quick presets, density toggle, and the app has full keyboard navigation.
+- Verified: scanner shows Presets chips (Top Gainers, Undervalued, High VAE, Low Risk, High Confidence), clicking filters results. No browser errors.
+
+Priority Next:
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Add more data sources (CoinMarketCap key-based)
+- Mobile responsive refinements
+- Performance optimizations for large universes
