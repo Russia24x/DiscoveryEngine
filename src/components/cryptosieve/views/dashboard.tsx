@@ -141,6 +141,7 @@ export function DashboardView() {
           value={data?.universeSize}
           loading={loading}
           tone="primary"
+          progress={data?.universeSize ? Math.min(100, (data.universeSize / 50) * 100) : 0}
         />
         <StatCard
           icon={ShieldCheck}
@@ -148,6 +149,7 @@ export function DashboardView() {
           value={data?.passed}
           loading={loading}
           tone="good"
+          progress={data?.passed && data?.universeSize ? (data.passed / data.universeSize) * 100 : 0}
         />
         <StatCard
           icon={AlertTriangle}
@@ -155,6 +157,7 @@ export function DashboardView() {
           value={data?.investigate}
           loading={loading}
           tone="warn"
+          progress={data?.investigate && data?.universeSize ? (data.investigate / data.universeSize) * 100 : 0}
         />
         <StatCard
           icon={Zap}
@@ -162,6 +165,7 @@ export function DashboardView() {
           value={data?.avgConfidence != null ? `${Math.round(data.avgConfidence * 100)}%` : null}
           loading={loading}
           tone="primary"
+          progress={data?.avgConfidence != null ? data.avgConfidence * 100 : 0}
         />
       </div>
 
@@ -276,27 +280,39 @@ function StatCard({
   value,
   loading,
   tone,
+  progress,
 }: {
   icon: any;
   label: string;
   value: number | string | null;
   loading: boolean;
   tone: "primary" | "good" | "warn";
+  progress?: number; // 0-100, optional progress bar
 }) {
   const color =
     tone === "good" ? "text-pass" : tone === "warn" ? "text-investigate" : "text-primary";
+  const barColor =
+    tone === "good" ? "bg-pass" : tone === "warn" ? "bg-investigate" : "bg-primary";
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4">
+    <Card className="overflow-hidden group hover:shadow-sm transition-shadow">
+      <CardContent className="p-4 relative">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] text-muted-foreground leading-tight">{label}</span>
-          <Icon className={cn("h-3.5 w-3.5", color)} />
+          <Icon className={cn("h-3.5 w-3.5 transition-transform group-hover:scale-110", color)} />
         </div>
         {loading ? (
           <Skeleton className="h-7 w-16" />
         ) : (
           <div className={cn("text-2xl font-bold font-mono num", color)}>
             {value ?? "—"}
+          </div>
+        )}
+        {progress != null && !loading && (
+          <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all duration-700", barColor)}
+              style={{ width: `${Math.min(100, progress)}%` }}
+            />
           </div>
         )}
       </CardContent>
