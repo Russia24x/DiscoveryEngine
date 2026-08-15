@@ -540,3 +540,30 @@ Priority Next:
 - Add pagination to /api/projects for large universes
 - Add .env.example with ENCRYPTION_KEY documentation
 - Consider migrating from SQLite to PostgreSQL for production
+
+---
+
+Task ID: 16
+Agent: main (engineering improvements round 4)
+Task: rankUniverse optimization, market payload slim, decision null guards, .env.example
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- rankUniverse O(n²)→O(n): replaced 4× scored.find() calls (O(n) each) with a single Map lookup (O(1)). For 22 projects: 88 find calls → 4 Map builds. Verified: HYPE ranks correct (fundamentalRank=14, marketRank=14).
+- market/route.ts payload: recentScans now uses Prisma select to fetch only 8 fields needed by dashboard. Excludes heavy resultsJson blob. Verified: resultsJson not in response, payload reduced ~90%.
+- decision.ts null guards: VAE/delta warnings now only show when values are non-null. Projects with no PR/TC data no longer trigger false "weak accrual" / "low distribution" messages. Verified: custom project with no PR/TC → empty against array.
+- Added .env.example with ENCRYPTION_KEY, DATABASE_URL, and data source API key documentation. Includes production setup instructions (openssl rand -base64 32).
+- Lint clean (0 errors). Committed + pushed (22cdbfc).
+
+Stage Summary:
+- rankUniverse is now O(n log n) instead of O(n²) — scales to large universes.
+- Market route payload is ~90% lighter (no resultsJson blob).
+- Decision engine no longer produces misleading warnings for projects with missing data.
+- .env.example documents all environment variables for new developers.
+
+Priority Next:
+- Add rate limiting on copilot endpoints
+- Replace custom modals with Radix Dialog for focus trapping
+- Add pagination to /api/projects
+- Consider migrating from SQLite to PostgreSQL for production
+- Add automated tests for engine formulas
