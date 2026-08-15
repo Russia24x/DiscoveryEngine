@@ -27,7 +27,7 @@ interface MarketData {
 
 export function DashboardView() {
   const { t } = useI18n();
-  const { setView, openProject, scanning, setScanning, setScanResults, setScanMeta } = useApp();
+  const { setView, openProject, scanning, setScanning, setScanResults, setScanMeta, scanMeta: scanMetaFromStore } = useApp();
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +159,13 @@ export function DashboardView() {
                 </div>
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t.dashboard.marketRegime}</div>
-                  <div className="text-sm font-bold">{t.dashboard.regimeNeutral}</div>
+                  <div className="text-sm font-bold">
+                    {(scanMetaFromStore?.marketRegime ?? 1) >= 1.05
+                      ? t.dashboard.regimeRiskOn
+                      : (scanMetaFromStore?.marketRegime ?? 1) <= 0.95
+                      ? t.dashboard.regimeRiskOff
+                      : t.dashboard.regimeNeutral}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -167,13 +173,18 @@ export function DashboardView() {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground">Risk-Off</span>
                   <div className="relative h-2 w-32 rounded-full bg-gradient-to-r from-reject via-investigate to-pass overflow-hidden">
-                    <div className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-foreground border-2 border-background shadow-md" style={{ left: "50%" }} />
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-foreground border-2 border-background shadow-md transition-all duration-500"
+                      style={{ left: `calc(${Math.max(0, Math.min(100, ((scanMetaFromStore?.marketRegime ?? 1) - 0.9) / 0.2 * 100))}% - 6px)` }}
+                    />
                   </div>
                   <span className="text-[10px] text-muted-foreground">Risk-On</span>
                 </div>
                 <div className="text-end">
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">M</div>
-                  <div className="font-mono text-sm font-bold num text-primary">1.000</div>
+                  <div className="font-mono text-sm font-bold num text-primary">
+                    {(scanMetaFromStore?.marketRegime ?? 1).toFixed(3)}
+                  </div>
                 </div>
               </div>
             </div>

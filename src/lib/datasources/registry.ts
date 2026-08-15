@@ -11,7 +11,7 @@ export const ADAPTERS: DataSourceAdapter[] = [
   coingecko,
   defillama,
   binance,
-  // ── Future key-based adapters (interface-ready stubs) ──
+  // ── Key-based adapters (functional when API key is provided) ──
   {
     key: "cmc",
     name: "CoinMarketCap",
@@ -19,7 +19,28 @@ export const ADAPTERS: DataSourceAdapter[] = [
     requiresKey: true,
     endpoint: "https://pro-api.coinmarketcap.com/v1",
     coverage: "Market data, listings",
-    async fetchMarketData() { return []; },
+    async fetchMarketData(_symbols?: string[], apiKey?: string) {
+      if (!apiKey) return [];
+      try {
+        const { fetchWithTimeout } = await import("./fetch-utils");
+        const res = await fetchWithTimeout(
+          `${this.endpoint}/cryptocurrency/listings/latest?limit=100&convert=USD`,
+          { headers: { "X-CMC_PRO_API_KEY": apiKey, accept: "application/json" } },
+          5000
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.data ?? []).map((d: any) => ({
+          symbol: (d.symbol ?? "").toUpperCase(),
+          name: d.name,
+          priceUsd: d.quote?.USD?.price,
+          marketCap: d.quote?.USD?.market_cap,
+          fdv: d.quote?.USD?.fully_diluted_market_cap,
+          totalSupply: d.total_supply,
+          floatSupply: d.circulating_supply,
+        }));
+      } catch { return []; }
+    },
     async fetchFundamentals() { return []; },
   },
   {
@@ -29,7 +50,25 @@ export const ADAPTERS: DataSourceAdapter[] = [
     requiresKey: true,
     endpoint: "https://data.messari.io/api/v1",
     coverage: "Protocol research, fundamentals",
-    async fetchMarketData() { return []; },
+    async fetchMarketData(_symbols?: string[], apiKey?: string) {
+      if (!apiKey) return [];
+      try {
+        const { fetchWithTimeout } = await import("./fetch-utils");
+        const res = await fetchWithTimeout(
+          `${this.endpoint}/assets?limit=100&fields=symbol,name,metrics/market_data/price_usd,metrics/market_data/marketcap_usd`,
+          { headers: { "x-messari-api-key": apiKey, accept: "application/json" } },
+          5000
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.data ?? []).map((d: any) => ({
+          symbol: (d.symbol ?? "").toUpperCase(),
+          name: d.name,
+          priceUsd: d.metrics?.market_data?.price_usd,
+          marketCap: d.metrics?.market_data?.marketcap_usd,
+        }));
+      } catch { return []; }
+    },
     async fetchFundamentals() { return []; },
   },
   {
@@ -39,6 +78,8 @@ export const ADAPTERS: DataSourceAdapter[] = [
     requiresKey: true,
     endpoint: "https://api.nansen.ai/v1",
     coverage: "Smart money, wallet intelligence",
+    // Nansen API requires a paid subscription; endpoint not publicly documented.
+    // Returns empty until API spec is available. Key is stored encrypted at rest.
     async fetchMarketData() { return []; },
     async fetchFundamentals() { return []; },
   },
@@ -123,6 +164,22 @@ export async function collectUniverse(opts?: {
       }
     }
     if (enabled.includes("binance")) sourcesUsed.push("binance");
+
+    // 2) Try key-based adapters (CMC, Messari) if API keys are provided.
+    for (const adapterKey of ["cmc", "messari"]) {
+      const adapter = getAdapter(adapterKey);
+      const key = apiKeys[adapterKey];
+      if (adapter && enabled.includes(adapterKey) && key) {
+        const rows = await adapter.fetchMarketData(undefined, key);
+        if (rows.length > 0) {
+          // Overlay onto existing market data (higher priority than CoinGecko).
+          for (const r of rows) {
+            liveMarketBySymbol.set(r.symbol, r);
+          }
+          if (!sourcesUsed.includes(adapterKey)) sourcesUsed.push(adapterKey);
+        }
+      }
+    }
   }
 
   const live = liveMarketBySymbol.size > 0;
