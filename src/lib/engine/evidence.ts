@@ -276,9 +276,11 @@ export function buildEvidenceGraph(input: ProjectInput, scores: Scores): Evidenc
     key: "vae",
     label: "VAE",
     current: vae,
-    historical: [vae * 0.7, vae * 0.8, vae * 0.85, vae * 0.9, vae * 0.95, vae],
+    // Use a flat historical series for VAE (no fabricated trend).
+    // The trend will be "flat" unless real historical data is available.
+    historical: Array(6).fill(vae),
     peerPercentile: null,
-    trend: trendOf([vae * 0.7, vae * 0.85, vae * 0.9, vae]),
+    trend: "flat" as const,
     unit: "%",
   });
   metrics.push({

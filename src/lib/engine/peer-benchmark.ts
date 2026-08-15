@@ -29,15 +29,22 @@ export function benchmarkUniverse(projects: RankedProject[]): Map<string, PeerPe
   const riskVals = projects.map((p) => p.components.r ?? 0);
   const mpVals = projects.map((p) => p.components.pq ?? 0); // proxy: PQ for market position/quality
   const rgVals = projects.map((p) => p.components.pq ?? 0);
-  const unlockVals = projects.map((p) => (p.supply.fdr == null ? 0 : 100 - p.supply.fdr * 100)); // inverse FDR
+  // For unlock risk: filter out null FDR values so they don't skew the percentile.
+  // Projects with null FDR get null unlockRisk (unknown, not worst).
+  const validUnlockVals = projects
+    .filter((p) => p.supply.fdr != null)
+    .map((p) => 100 - p.supply.fdr! * 100); // inverse FDR
 
   for (const p of projects) {
+    const unlockRisk = p.supply.fdr == null
+      ? null
+      : percentileRank(validUnlockVals, 100 - p.supply.fdr * 100);
     map.set(p.symbol, {
       revenueGrowth: percentileRank(rgVals, p.components.pq ?? 0),
       marketPosition: percentileRank(mpVals, p.components.pq ?? 0),
       vae: percentileRank(vaeVals, p.vae.vae ?? 0),
       risk: percentileRank(riskVals, p.components.r ?? 0),
-      unlockRisk: percentileRank(unlockVals, p.supply.fdr == null ? 0 : 100 - p.supply.fdr * 100),
+      unlockRisk,
     });
   }
   return map;

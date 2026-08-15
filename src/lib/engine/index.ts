@@ -84,7 +84,7 @@ export function rankUniverse(
       priceUsd: input.priceUsd,
       marketCap: input.marketCap,
       fdv: input.fdv,
-      tvl: input.pr, // TVL proxy not stored; use pr if needed elsewhere
+      tvl: undefined, // TVL not available from current data sources
       ...s,
       fundamentalRank: 0,
       confidenceRank: 0,

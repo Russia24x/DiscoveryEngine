@@ -170,7 +170,7 @@ async function persistScan(
         priceUsd: input.priceUsd ?? null,
         marketCap: input.marketCap ?? null,
         fdv: input.fdv ?? null,
-        tvl: input.pr ?? null,
+        tvl: null, // TVL is not available from current data sources; was incorrectly set to PR.
         revenueAnnual: input.pr ?? null,
         floatSupply: input.floatSupply ?? null,
         totalSupply: input.totalSupply ?? null,
