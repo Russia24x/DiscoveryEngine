@@ -201,3 +201,39 @@ Priority Next:
 - Persist historical scores per scan for real trend tracking
 - Portfolio tracker with P&L
 - Add more data sources (CoinMarketCap key-based)
+
+---
+
+Task ID: 6
+Agent: main (cron webDevReview)
+Task: QA testing + Portfolio tracker + Command palette + market regime indicator
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 9 views rendering correctly. No console errors.
+- Portfolio Tracker:
+  - New store `src/lib/portfolio-store.ts`: zustand + localStorage persistence. Positions with symbol, name, entryPrice, quantity, entryDate. computePnl() helper.
+  - New component `PortfolioView`: summary header (cost basis, current value, P&L with color coding), positions table (qty, entry, current, value, P&L, IA Final), add position dialog with symbol autocomplete (datalist from /api/projects), auto-fills name + entry price.
+  - Empty state with briefcase icon.
+- Command Palette (Cmd+K):
+  - New component `CommandPalette`: global search triggered by Cmd+K/Ctrl+K keyboard shortcut or clicking Search button in header.
+  - Fetches all projects from /api/projects, filters by symbol/name/sector.
+  - Keyboard navigation: ↑↓ to navigate, Enter to select, Esc to close.
+  - Results show logo, symbol, name, sector, price, market rank, IA Final with color coding.
+  - Backdrop blur, animated entry, footer with keyboard hints.
+- Market regime indicator on dashboard:
+  - Added regime card between hero and quick stats. Shows regime status (Neutral), gradient meter from Risk-Off (red) to Risk-On (green) with indicator dot, M value.
+- Navigation: added Portfolio to nav (en + fa RTL). App now has 10 views.
+- i18n: added nav.portfolio key (en + fa RTL).
+- Lint clean (0 errors). Committed + pushed (6b8ef46, 3a84771).
+
+Stage Summary:
+- App now has 10 views: Dashboard, Scanner, Project, Compare, Heatmap, Portfolio, Data Sources, News & Social, Settings, Framework.
+- Verified: portfolio shows empty state + add position dialog, command palette opens with Cmd+K and shows HYPE/MKR/AAVE results with keyboard navigation, dashboard shows market regime indicator with gradient meter. No browser errors.
+
+Priority Next:
+- Continuous Monitoring: auto-scan on interval + thesis update alerts
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Persist historical scores per scan for real trend tracking
+- Add more data sources (CoinMarketCap key-based)
+- Export/import portfolio data
