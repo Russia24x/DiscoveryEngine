@@ -19,3 +19,36 @@ Stage Summary:
 - سند بنیاد قفل شد: FRAMEWORK.md (v1.0).
 - قوانین git در RULES.md تعریف شد.
 - آمادهٔ فاز پیاده‌سازی: Prisma schema → i18n → Data Sources → Scoring Engine → API → UI.
+
+---
+
+Task ID: 1
+Agent: main (orchestrator)
+Task: پیاده‌سازی کامل موتور تصمیم‌گیری + UI + API + کامیت GitHub
+
+Work Log:
+- Prisma schema کامل: Project, Metric, Evidence, RiskEntry, Thesis, DataSource, ScanRecord, NewsSource, NewsItem (pushed to SQLite).
+- i18n دو زبانه سفارشی (context-based، بدون locale routing چون فقط / مجاز): fa (RTL) + en (LTR)، فونت Vazirmatn + Geist، ThemeScript برای جلوگیری از FOUC.
+- Scoring Engine (pure TS، platform-independent): types, vae (chain + supply), gates (mechanism-aware), components (PQ/TQ/VA/V/R با وزن‌های قفل‌شده)، ia (IA_raw, C, M)، decision (explainable)، thesis (intact %)، peer-benchmark (percentile engine)، orchestrator (scoreProject + rankUniverse).
+- Data Sources Layer پلاگین‌پذیر: CoinGecko + DeFiLlama + Binance (رایگان، بدون کلید) با fetchWithTimeout (4s) + stub‌های کلیددار CMC/Messari/Nansen برای آینده. Bundled dataset 22 پروژهٔ نماینده با fundamentals واقع‌گرایانه به‌عنوان fallback/seed. collectUniverse: bundle base + live market overlay.
+- API routes: /api/scan (fire-and-forget DB persist), /api/market, /api/projects, /api/project-detail, /api/datasources, /api/news.
+- UI/UX مدرن: AppShell با sidebar + glass header، Dashboard، Scanner (جدول 4-رتبه‌ای + فیلتر + CSV export)، Project Detail (IA pipeline، 5 gauge، VAE chain، gates، supply، peer benchmark، thesis، evidence)، Data Sources، News & Social، Settings، Framework reference. تم dark-first با accent emerald، scrollbar سفارشی، animations.
+- رفع باگ confidence: computeConfidence حالا dataCompleteness را از فیلدهای input محاسبه می‌کند (نه placeholder 0).
+- Lint تمیز (0 error). Commit + push به GitHub (Russia24x/DiscoveryEngine) موفق.
+
+Stage Summary:
+- محصول کامل و قابل‌اجرا: https://github.com/Russia24x/DiscoveryEngine
+- تأیید end-to-end با agent-browser: داشبورد فارسی RTL، اسکن با 22 پروژه (live prices از CoinGecko + bundle fundamentals)، HYPE: iaRaw=19.5 C=0.95 iaEff=18.5 iaFinal=18.1 INVESTIGATE با thesis "Perp DEX tollbooth"، gates، peer benchmark، VAE chain.
+- toggle زبان (fa/en)، footer sticky، بدون خطای browser.
+- Cron job 15-min webDevReview تنظیم شد (job_id 324036).
+
+Unresolved / Risks:
+- dev server در sandbox پس از پایان Bash tool call می‌میرد (process reaping). Watchdog ساخته شد اما خودش هم reaped می‌شود. cron job باید سرور را restart کند.
+- داده‌های bundle نمونه‌اند (per FRAMEWORK.md §16)؛ برای production باید با منابع اولیه جایگزین شوند.
+- v1.1+ هنوز پیاده‌سازی نشده (Evidence Graph deepening، Historical Score، Smart Money، Catalyst Engine).
+
+Priority Next (per FRAMEWORK.md §15):
+- v1.1: Evidence Graph واقعی (claims با source/freshness/contradictions)، Project/Token/Investment separation برجسته‌تر.
+- v1.2: Historical Score (روند IA در زمان)، Percentile Engine غنی‌تر.
+- افزودن RSS feed fetcher واقعی برای News view.
+- افزودن نمودارهای recharts برای روند PQ/TQ/IA.
