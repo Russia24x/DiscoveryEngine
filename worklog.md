@@ -125,3 +125,44 @@ Priority Next (per FRAMEWORK.md §15):
 - Add real on-chain data sources for Capital Flow (Etherscan, Glassnode when key available)
 - Add price chart with technical indicators to project detail
 - Add portfolio/watchlist feature with alerts
+
+---
+
+Task ID: 4
+Agent: main (cron webDevReview)
+Task: QA testing + Price Chart + Watchlist + v2.0 AI Research Copilot + styling polish
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all v1.1-v1.4 features rendering correctly. No console errors.
+- Price Chart with Technical Indicators:
+  - New engine module `src/lib/engine/price-chart.ts`: generatePriceSeries() creates 90-day price + volume + MA7/MA30 + RSI(14) + momentum. Deterministic per symbol. Computes support/resistance, volatility (annualized), trend (bullish/bearish/sideways).
+  - New component `PriceChartView` with recharts: 3 views (Price area chart with MA overlays + support/resistance lines, Volume bar chart, RSI area chart with 30/70 reference lines). Indicators row: RSI, MA Cross (golden/death), Momentum (10d), Volatility. MA toggle button.
+  - Added to project detail after separation cards.
+- Watchlist Feature:
+  - New store `src/lib/watchlist-store.ts`: zustand + localStorage persistence. add/remove/update/has operations.
+  - New component `WatchlistView`: displays watchlist items enriched with live IA data from /api/projects. Shows logo, symbol, sector, price, IA final, decision badge, thesis status. Empty state with star icon.
+  - New component `StarButton`: add/remove from watchlist with toast feedback. Added to project detail header (lg size) + scanner rows (sm size, hover reveal).
+  - WatchlistView added to dashboard.
+- v2.0 AI Research Copilot (FRAMEWORK.md §15):
+  - New API route `POST /api/copilot` using z-ai-web-dev-sdk (backend only). Gathers full project context (scores, thesis, tokenomics, capital flow, catalyst, evidence) and sends to LLM with CryptoSieve framework system prompt. Answers questions about decisions, risks, thesis, catalysts.
+  - New component `CopilotChat`: chat UI with message bubbles (user/assistant), 6 suggested questions, loading state with pulse animation, error handling. Added to project detail at the bottom.
+  - Verified: HYPE copilot explains "INVESTIGATE because low Valuation (V=14.5) and moderate capital inflows (composite=15) prevent PASS".
+- Styling improvements:
+  - Dashboard StatCard: added progress bar (0-100) showing metric proportion, hover micro-interaction (icon scale 110%, card shadow).
+  - Scanner rows: star button appears on hover.
+  - Copilot: grid-bg header, sparkle icon, suggested question chips.
+- Lint clean (0 errors). Committed + pushed (788619f, 9fb93c4).
+
+Stage Summary:
+- v2.0 AI Copilot delivered. Project detail now shows: Header (+star) → SeparationCards → PriceChartView → IA Pipeline + Decision → 5 gauges → HistoricalTrendChart → VAE chain + Supply → TokenomicsView → Gates → Peer Benchmark → Thesis → EvidenceGraphView → CapitalFlowView → CatalystView → CopilotChat.
+- Dashboard: pipeline strip + assets tracked + avg confidence + 4 stat cards with progress bars + top picks + WatchlistView + recent scans.
+- Scanner: decision donut + star buttons on rows + filters + CSV export.
+- Verified: price chart (RSI=67.7, MA golden cross, momentum +4%), watchlist persists to localStorage, star button works, AI copilot gives context-aware answers. No browser errors.
+
+Priority Next:
+- Continuous Monitoring: auto-scan on interval + thesis update alerts
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Persist historical scores per scan for real trend tracking
+- Add comparison view (side-by-side 2-3 projects)
+- Portfolio tracker with P&L
