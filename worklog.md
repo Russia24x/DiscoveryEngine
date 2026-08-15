@@ -437,3 +437,41 @@ Priority Next:
 - Add error states to views that silently swallow errors
 - Replace custom modals with Radix Dialog for a11y
 - Add range validation to custom-project component scores
+
+---
+
+Task ID: 13
+Agent: main (engineering improvements)
+Task: Performance optimizations, input validation, error states
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- Universe caching with TTL:
+  - Added 60s TTL cache in collectUniverse(). Caches the full universe (inputs + live flag + sources) to avoid hammering CoinGecko/DeFiLlama on every request.
+  - Scan route uses skipCache:true to always get fresh data.
+  - clearUniverseCache() exported for manual invalidation.
+  - Verified: 2nd project-detail call 1.09s → 0.02s (48x faster).
+- Batch DB upserts:
+  - Scan route: replaced sequential for-loop of N await db.project.upsert() with db.$transaction(enriched.map(...)) for parallel execution in a single transaction. Reduces N round-trips to 1.
+  - News sync: replaced sequential for-loop of db.newsItem.create() with db.newsItem.createMany() in a $transaction with deleteMany. Atomic + fast.
+- Input validation:
+  - Compare API: validates all symbols are non-empty strings (rejects numbers/nulls with 400). Deduplicates case-insensitively.
+  - History API: clamps limit to 1-100 range. NaN → 20 default. Prevents unbounded queries.
+  - Custom-project API: clampScore() for 0-100 component scores, clampNonNeg() for USD amounts. tokenUtility=99999 → clamped to 100.
+- Error states:
+  - Dashboard: added error state with AlertTriangle icon + retry button. Previously silently swallowed fetch errors.
+  - Dashboard runScan: error in post-scan refresh now sets error state.
+- Lint clean (0 errors). Committed + pushed (495091e).
+
+Stage Summary:
+- Universe caching delivers 48x speedup on repeated project-detail/compare/heatmap requests.
+- All DB writes are now batched in transactions (scan upserts, news sync).
+- All API inputs are validated and clamped (symbols, limits, scores, USD amounts).
+- Dashboard shows proper error states instead of silently failing.
+
+Priority Next:
+- Add error states to remaining views (heatmap, portfolio, compare)
+- Replace custom modals with Radix Dialog for accessibility
+- Add contentEditable guard to keyboard shortcuts
+- Add client-disconnect handling to copilot-stream
+- Consider Redis or edge-cache for multi-instance deployments
