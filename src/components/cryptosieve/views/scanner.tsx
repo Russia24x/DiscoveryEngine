@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { DecisionBadge, RankBadge, ScoreGauge } from "../primitives";
+import { DecisionDonut, DecisionLegend } from "../decision-donut";
 import { fmtUsd } from "@/lib/format";
 import { Radar, RefreshCw, Search, Download, Filter, ArrowDownUp, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -127,14 +128,32 @@ export function ScannerView() {
         </div>
       </div>
 
-      {/* Market regime + counts strip */}
+      {/* Decision distribution + market regime */}
       {scanMeta && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          <MiniStat label={t.scanner.resultsCount.replace("{count}", "")} value={scanMeta.universeSize} />
-          <MiniStat label={t.dashboard.passed} value={scanMeta.passed} tone="good" />
-          <MiniStat label={t.dashboard.investigate} value={scanMeta.investigate} tone="warn" />
-          <MiniStat label={t.dashboard.rejected} value={scanMeta.rejected} tone="bad" />
-          <MiniStat label="M (regime)" value={scanMeta.marketRegime.toFixed(3)} tone="primary" />
+        <div className="grid md:grid-cols-3 gap-3">
+          <Card className="md:col-span-1">
+            <CardContent className="p-4 flex items-center gap-4">
+              <DecisionDonut
+                pass={scanMeta.passed}
+                investigate={scanMeta.investigate}
+                reject={scanMeta.rejected}
+                size={100}
+              />
+              <div className="flex-1">
+                <DecisionLegend
+                  pass={scanMeta.passed}
+                  investigate={scanMeta.investigate}
+                  reject={scanMeta.rejected}
+                />
+              </div>
+            </CardContent>
+          </Card>
+          <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+            <MiniStat label={t.scanner.resultsCount.replace("{count}", "")} value={scanMeta.universeSize} />
+            <MiniStat label={t.dashboard.passed} value={scanMeta.passed} tone="good" />
+            <MiniStat label={t.dashboard.investigate} value={scanMeta.investigate} tone="warn" />
+            <MiniStat label={t.dashboard.rejected} value={scanMeta.rejected} tone="bad" />
+          </div>
         </div>
       )}
 

@@ -85,20 +85,50 @@ export function DashboardView() {
         <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t.dashboard.title}</h1>
               {scanning && (
                 <Badge variant="secondary" className="gap-1.5 animate-pulse-soft">
                   <Activity className="h-3 w-3" /> {t.scanner.scanning}
                 </Badge>
               )}
+              {data?.hasData && !scanning && (
+                <Badge variant="outline" className="gap-1.5 text-[11px]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-pass animate-pulse-soft" />
+                  {data.universeSize} assets tracked
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground max-w-xl">{t.dashboard.subtitle}</p>
+            {/* Pipeline formula strip */}
+            <div className="flex items-center gap-1 flex-wrap text-[10px] font-mono text-muted-foreground mt-1">
+              {["Gate", "PQ", "TQ", "VA", "V", "R", "IA_raw", "C", "IA_eff", "M", "IA_final"].map((s, i, arr) => (
+                <span key={s} className="flex items-center gap-1">
+                  <span className={
+                    s === "IA_final" ? "px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold" :
+                    s === "Gate" ? "px-1.5 py-0.5 rounded bg-muted/60" :
+                    ["C", "M"].includes(s) ? "px-1.5 py-0.5 rounded bg-investigate/15 text-investigate" :
+                    "px-1.5 py-0.5 rounded bg-muted/40"
+                  }>{s}</span>
+                  {i < arr.length - 1 && <span className="text-muted-foreground/50">→</span>}
+                </span>
+              ))}
+            </div>
           </div>
-          <Button onClick={runScan} disabled={scanning} size="lg" className="shadow-glow gap-2">
-            <Radar className="h-4 w-4" />
-            {t.dashboard.runScan}
-          </Button>
+          <div className="flex items-center gap-3">
+            {data?.hasData && (
+              <div className="text-end hidden sm:block">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t.dashboard.avgConfidence}</div>
+                <div className="font-mono text-xl font-bold text-primary num">
+                  {Math.round((data.avgConfidence ?? 0) * 100)}%
+                </div>
+              </div>
+            )}
+            <Button onClick={runScan} disabled={scanning} size="lg" className="shadow-glow gap-2">
+              <Radar className="h-4 w-4" />
+              {t.dashboard.runScan}
+            </Button>
+          </div>
         </div>
       </div>
 
