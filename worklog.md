@@ -567,3 +567,29 @@ Priority Next:
 - Add pagination to /api/projects
 - Consider migrating from SQLite to PostgreSQL for production
 - Add automated tests for engine formulas
+
+---
+
+Task ID: 17
+Agent: main (engineering improvements round 5)
+Task: peer-benchmark null FDR, evidence VAE trend, scan route TVL
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- peer-benchmark.ts: null FDR no longer maps to 0 (worst percentile). Projects with null FDR now get null unlockRisk (unknown, not worst). Percentile calculation only uses projects with valid FDR values. Verified: HYPE unlockRisk=88.6 (computed from valid entries only).
+- evidence.ts: VAE metric trend no longer fabricated as always-improving. Was [vae*0.7, vae*0.8, vae*0.85, vae*0.9, vae*0.95, vae] (fake uptrend). Now flat historical [vae, vae, ...] with trend='flat'. Verified: trend=flat.
+- scan/route.ts + engine/index.ts: tvl field no longer stores protocol revenue (PR). TVL ≠ PR (TVL is typically 10-100x larger). Now null. Verified: DB tvl=null (was storing PR value).
+- Lint clean (0 errors). Committed + pushed (cfc2d16).
+
+Stage Summary:
+- Peer benchmarking no longer penalizes projects with missing FDR data.
+- Evidence graph no longer fabricates improving VAE trends.
+- Database no longer stores incorrect TVL values (was storing revenue).
+- All prior review issues are now addressed.
+
+Priority Next:
+- Add rate limiting on copilot endpoints
+- Replace custom modals with Radix Dialog for focus trapping
+- Add pagination to /api/projects
+- Add automated tests for engine formulas
+- Consider migrating from SQLite to PostgreSQL for production
