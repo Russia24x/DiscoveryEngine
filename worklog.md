@@ -166,3 +166,38 @@ Priority Next:
 - Persist historical scores per scan for real trend tracking
 - Add comparison view (side-by-side 2-3 projects)
 - Portfolio tracker with P&L
+
+---
+
+Task ID: 5
+Agent: main (cron webDevReview)
+Task: QA testing + Comparison view with radar chart + Market heatmap + scanner sector filter
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all v1.1-v2.0 features rendering correctly. No console errors.
+- Comparison View (side-by-side 2-4 projects):
+  - New API `POST /api/compare`: computes scores, ranks, tokenomics, capital flow, thesis for each project. Returns winners per metric (best PQ/TQ/VA/V/R/IA).
+  - New component `CompareView`: project selector chips (2-4, auto-selects top 3 by IA Final), recharts RadarChart showing PQ/TQ/VA/V/R(inverted)/IA_raw with color-coded overlays, comparison table with winner badges per metric.
+  - Fetches available projects from /api/projects if scan results not in store.
+- Market Heatmap (sector performance matrix):
+  - New API `GET /api/heatmap`: groups universe by sector, computes avg IA Final, avg confidence, total market cap, decision counts per sector.
+  - New component `HeatmapView`: sector cards with heat indicator bar (color by avg IA), expandable to show individual projects with decision badges, market rank, price.
+- Scanner sector filter:
+  - Added sector filter chips (All + each sector) to scanner filters row.
+  - Integrated into useMemo filtered logic.
+- Navigation: added Compare + Heatmap to nav (en + fa RTL).
+- i18n: added compare.*, heatmap.* keys (en + fa RTL).
+- Fixed import path bug (./primitives → ../primitives in views subfolder).
+- Lint clean (0 errors). Committed + pushed (bc3e846, 1877ec1).
+
+Stage Summary:
+- App now has 9 views: Dashboard, Scanner, Project, Compare, Heatmap, Data Sources, News & Social, Settings, Framework.
+- Verified: heatmap shows 14 sectors (Yield 16.8, CDP 16.7, Perp DEX 16.6...), compare shows HYPE/MKR/AAVE radar with HYPE as IA Final winner, scanner sector filter works (All/Cross-chain DEX/DEX/Lending/Perp DEX...). No browser errors.
+
+Priority Next:
+- Continuous Monitoring: auto-scan on interval + thesis update alerts
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Persist historical scores per scan for real trend tracking
+- Portfolio tracker with P&L
+- Add more data sources (CoinMarketCap key-based)
