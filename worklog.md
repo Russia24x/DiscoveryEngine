@@ -333,3 +333,31 @@ Priority Next:
 - Mobile responsive refinements
 - Add comparison of historical scores between projects
 - Performance optimizations for large universes
+
+---
+
+Task ID: 10
+Agent: main (cron webDevReview)
+Task: QA testing + Custom Project Analyzer (manual fundamentals entry)
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- QA testing via agent-browser: all 11 views rendering correctly. No console errors.
+- Custom Project Analyzer:
+  - New API `POST /api/custom-project`: accepts manually entered fundamentals (market data, value accrual chain PR/PC/TC, supply pressures, component scores 0-100) and returns full scoring result with all analysis modules (scores, thesis, evidence graph, tokenomics, capital flow, catalyst, price series, peer benchmarking against bundle universe).
+  - New component `CustomProjectView`: comprehensive form with sections for basic info, market data, value accrual chain, supply pressures, and component scores. Quick presets (Strong Perp DEX, Weak Token Strong Project, High Risk Speculative) for instant testing.
+  - Result renders: separation cards, 5 component gauges, price chart, historical trend, tokenomics, evidence graph, capital flow, catalyst — the full project detail analysis pipeline.
+- Navigation: added Custom to nav (en + fa RTL). App now has 12 views.
+- i18n: added customProject.* keys (en + fa RTL).
+- Lint clean (0 errors). Committed + pushed (1832620).
+
+Stage Summary:
+- App now has 12 views: Dashboard, Scanner, Project, Compare, Heatmap, Portfolio, Alerts, Custom, Data Sources, News & Social, Settings, Framework.
+- Verified: TEST project (Strong Perp DEX preset) scored iaRaw=21.4, iaFinal=17.9, INVESTIGATE with all analysis modules (tokenomics, evidence graph, capital flow, catalyst, price series). Custom view shows form with presets and Analyze button. No browser errors.
+
+Priority Next:
+- Real on-chain data sources (Etherscan, Glassnode) for Capital Flow
+- Add more data sources (CoinMarketCap key-based)
+- Mobile responsive refinements
+- Performance optimizations for large universes
+- Add keyboard shortcuts help overlay
