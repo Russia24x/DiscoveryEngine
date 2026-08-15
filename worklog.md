@@ -394,3 +394,46 @@ Priority Next:
 - Add more data sources (CoinMarketCap key-based)
 - Mobile responsive refinements
 - Performance optimizations for large universes
+
+---
+
+Task ID: 12
+Agent: main (code review + bug fixes)
+Task: Comprehensive codebase review and engineering improvements
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- Launched 3 parallel review agents (engine, API routes, React components) to identify bugs.
+- Fixed critical engine bugs:
+  - V formula: replaced broken `1 - mc/tc` (always 0 for real projects) with P/E-style normalization `clamp(100 - ratio*5, 0, 100)`.
+  - FDR: fixed USD/token dimensional mismatch (unlockEmission12m is USD, floatSupply is tokens). HYPE FDR: 0.09 → 0.0024.
+  - Tokenomics dilution: same USD/token fix. HYPE dilution: 13.5% → 0.24%.
+  - priceChange90d: added to ProjectInput type + propagated in toProjectInput. Price chart trend was always 0.
+  - evidence.ts: fixed generateHistoricalScores call shape (was missing iaRaw/iaEffective/iaFinal). IA sparklines were all-zeros.
+  - capital-flow.ts: fixed exchange flow signal inversion + insider direction swap.
+  - gates.ts: fixed `conditional: input.buybackThesis ?? false` type error.
+- Fixed security issues:
+  - SSRF protection in /api/news POST: URL scheme validation (http/https only), block internal IPs + AWS metadata endpoint.
+  - Copilot LLM role: changed from 'assistant' to 'system' for system prompt.
+- Fixed React anti-patterns:
+  - use-monitoring.ts: replaced non-reactive configRef with useState. Monitoring toggle was non-functional.
+  - i18n/provider.tsx: fixed stale resolvedTheme in system mode via systemPrefDark state.
+  - copilot-chat.tsx: added AbortController to prevent memory leaks on unmount.
+  - compare.tsx: fixed auto-select overriding user deselection via userInteractedRef. Moved toast out of setState updater.
+  - scanner.tsx: added keyboard accessibility (tabIndex, role, aria-label, onKeyDown).
+  - Removed dead code in app-shell.tsx, dashboard.tsx, copilot-stream/route.ts.
+- Lint clean (0 errors). Committed + pushed (1fd7c97, a23d4cb).
+
+Stage Summary:
+- 3 critical engine bugs fixed (V formula, FDR units, dilution units) — scores are now mathematically correct.
+- 2 security vulnerabilities fixed (SSRF, LLM role).
+- 4 React anti-patterns fixed (monitoring reactivity, theme reactivity, copilot abort, compare auto-select).
+- Scanner table rows now keyboard accessible.
+- Verified: HYPE FDR=0.0024 (was 0.09), dilution=0.24% (was 13.5%), SSRF blocked, copilot system role works.
+
+Priority Next:
+- Cache collectUniverse() result with TTL to avoid hammering free APIs
+- Batch DB upserts in scan route (currently N+1 sequential)
+- Add error states to views that silently swallow errors
+- Replace custom modals with Radix Dialog for a11y
+- Add range validation to custom-project component scores
