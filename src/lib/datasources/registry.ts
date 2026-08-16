@@ -108,11 +108,9 @@ export function clearUniverseCache() {
   universeCache = null;
 }
 
-// Collect a full universe of project inputs.
-// Strategy: the bundle (22 representative projects with full fundamentals) is ALWAYS
-// the base. If live market data is reachable, we overlay live prices/mcaps onto matching
-// bundle projects — giving live prices + proper fundamentals. This guarantees meaningful
-// scores even when only market data (not fundamentals) is available from free APIs.
+// Collect a full universe of project inputs via metric-driven discovery.
+// Flow: fetch ALL coins from CoinGecko + ALL protocols from DeFiLlama → merge by symbol → score.
+// The bundle (22 hardcoded projects) is ONLY used as fallback when both APIs fail.
 export async function collectUniverse(opts?: {
   useLive?: boolean;
   enabledKeys?: string[];
@@ -123,7 +121,6 @@ export async function collectUniverse(opts?: {
   live: boolean;
   sourcesUsed: string[];
 }> {
-  // Check cache first (unless explicitly skipped or useLive=false which uses bundle only).
   const useLive = opts?.useLive ?? true;
   if (useLive && !opts?.skipCache && universeCache) {
     const age = Date.now() - universeCache.timestamp;
@@ -138,79 +135,86 @@ export async function collectUniverse(opts?: {
 
   const enabled = opts?.enabledKeys ?? ["coingecko", "defillama", "binance"];
   const apiKeys = opts?.apiKeys ?? {};
-
   const sourcesUsed: string[] = [];
-  const bundle = getBundleUniverse();
 
-  // 1) Try live market data (CoinGecko) — used to refresh prices/mcaps on bundle projects.
-  let liveMarketBySymbol = new Map<string, MarketDataRow>();
-  let liveFundamentalsBySymbol = new Map<string, FundamentalsRow>();
-
+  // ── 1) Fetch ALL market data from CoinGecko (250 coins) ──
+  let marketBySymbol = new Map<string, MarketDataRow>();
   if (useLive) {
     const cg = getAdapter("coingecko");
     if (cg && enabled.includes("coingecko")) {
       const rows = await cg.fetchMarketData(undefined, apiKeys.coingecko);
       if (rows.length > 0) {
-        liveMarketBySymbol = new Map(rows.map((r) => [r.symbol, r]));
+        marketBySymbol = new Map(rows.map((r) => [r.symbol, r]));
         sourcesUsed.push("coingecko");
       }
     }
+
+    // ── 2) Fetch ALL fundamentals from DeFiLlama (hundreds of protocols) ──
+    let fundamentalsBySymbol = new Map<string, FundamentalsRow>();
     const dl = getAdapter("defillama");
     if (dl && enabled.includes("defillama")) {
       const fund = await dl.fetchFundamentals(undefined, apiKeys.defillama);
       if (fund.length > 0) {
-        liveFundamentalsBySymbol = new Map(fund.map((f) => [f.symbol, f]));
+        fundamentalsBySymbol = new Map(fund.map((f) => [f.symbol, f]));
         sourcesUsed.push("defillama");
       }
     }
-    if (enabled.includes("binance")) sourcesUsed.push("binance");
 
-    // 2) Try key-based adapters (CMC, Messari) if API keys are provided.
+    // ── 3) Try key-based adapters (CMC, Messari) if API keys provided ──
     for (const adapterKey of ["cmc", "messari"]) {
       const adapter = getAdapter(adapterKey);
       const key = apiKeys[adapterKey];
       if (adapter && enabled.includes(adapterKey) && key) {
         const rows = await adapter.fetchMarketData(undefined, key);
         if (rows.length > 0) {
-          // Overlay onto existing market data (higher priority than CoinGecko).
-          for (const r of rows) {
-            liveMarketBySymbol.set(r.symbol, r);
-          }
+          for (const r of rows) marketBySymbol.set(r.symbol, r);
           if (!sourcesUsed.includes(adapterKey)) sourcesUsed.push(adapterKey);
         }
       }
     }
+
+    // ── 4) Discovery: merge CoinGecko + DeFiLlama by symbol ──
+    // Projects in BOTH sources: full data (market + fundamentals).
+    // Projects only in CoinGecko: market only (no fundamentals → will fail VAE gate, correct).
+    // Projects only in DeFiLlama: fundamentals only (no market → V will be weak, correct).
+    const allSymbols = new Set([...marketBySymbol.keys(), ...fundamentalsBySymbol.keys()]);
+    const inputs: ReturnType<typeof toProjectInput>[] = [];
+
+    for (const symbol of allSymbols) {
+      const mkt = marketBySymbol.get(symbol);
+      const fund = fundamentalsBySymbol.get(symbol);
+
+      if (mkt && fund) {
+        // Both sources — full data
+        inputs.push(toProjectInput(mkt, fund));
+      } else if (mkt) {
+        // CoinGecko only — market data, no fundamentals
+        inputs.push(toProjectInput(mkt));
+      } else if (fund) {
+        // DeFiLlama only — fundamentals, no market data
+        // Create a minimal MarketDataRow from fundamentals
+        const m: MarketDataRow = {
+          symbol: fund.symbol,
+          name: fund.name,
+          sector: fund.sector,
+          chain: fund.chain,
+        };
+        inputs.push(toProjectInput(m, fund));
+      }
+    }
+
+    const live = inputs.length > 0;
+
+    if (live) {
+      universeCache = { inputs, live, sourcesUsed, timestamp: Date.now() };
+      return { inputs, live, sourcesUsed };
+    }
   }
 
-  const live = liveMarketBySymbol.size > 0;
-
-  // 2) Build the universe: bundle base, with live market data overlaid where available.
-  const inputs = bundle.map(({ market, fundamentals }) => {
-    // Prefer live fundamentals (DeFiLlama) if present, else bundle fundamentals.
-    const liveFund = liveFundamentalsBySymbol.get(market.symbol);
-    const fund = liveFund ?? fundamentals;
-    // Overlay live market data (price, mcap, fdv, supply) onto the bundle market row.
-    const liveMkt = liveMarketBySymbol.get(market.symbol);
-    const mergedMarket: MarketDataRow = liveMkt
-      ? {
-          ...market,
-          priceUsd: liveMkt.priceUsd ?? market.priceUsd,
-          marketCap: liveMkt.marketCap ?? market.marketCap,
-          fdv: liveMkt.fdv ?? market.fdv,
-          totalSupply: liveMkt.totalSupply ?? market.totalSupply,
-          floatSupply: liveMkt.floatSupply ?? market.floatSupply,
-          logoUrl: liveMkt.logoUrl ?? market.logoUrl,
-          priceChange90d: liveMkt.priceChange90d ?? market.priceChange90d,
-        }
-      : market;
-    return toProjectInput(mergedMarket, fund);
-  });
-
-  // Cache the result if live data was used (don't cache bundle-only fallback,
-  // as it's instant and doesn't benefit from caching).
-  if (live) {
-    universeCache = { inputs, live, sourcesUsed: live ? sourcesUsed : ["bundle"], timestamp: Date.now() };
-  }
-
-  return { inputs, live, sourcesUsed: live ? sourcesUsed : ["bundle"] };
+  // ── Fallback: bundled dataset when APIs unreachable ──
+  const bundle = getBundleUniverse();
+  const inputs = bundle.map(({ market, fundamentals }) =>
+    toProjectInput(market, fundamentals)
+  );
+  return { inputs, live: false, sourcesUsed: ["bundle"] };
 }

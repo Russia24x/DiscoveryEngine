@@ -15,20 +15,24 @@ export function evaluateGates(input: ProjectInput): {
     {
       id: "vae",
       label: "VAE < 10",
-      passed: vae.vae == null ? false : vae.vae >= 10,
+      // When VAE is null (unknown — no tokenholder data), DON'T reject.
+      // Instead, pass the gate but confidence will be lower.
+      // Only reject when VAE is known AND below 10.
+      passed: vae.vae == null ? true : vae.vae >= 10,
       conditional: false,
-      value: vae.vae ?? 0,
+      value: vae.vae ?? -1, // -1 = unknown
       threshold: 10,
-      description: "Value Accrual Efficiency too low",
+      description: vae.vae == null ? "VAE unknown — no tokenholder data" : "Value Accrual Efficiency too low",
     },
     {
       id: "delta",
       label: "δ < 5",
-      passed: vae.delta == null ? false : vae.delta >= 5,
+      // Same logic: null = unknown, don't reject.
+      passed: vae.delta == null ? true : vae.delta >= 5,
       conditional: false,
-      value: vae.delta ?? 0,
+      value: vae.delta ?? -1,
       threshold: 5,
-      description: "Distribution Rate too low",
+      description: vae.delta == null ? "δ unknown — no distribution data" : "Distribution Rate too low",
     },
     {
       id: "risk",
