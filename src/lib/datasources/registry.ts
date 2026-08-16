@@ -133,8 +133,23 @@ export async function collectUniverse(opts?: {
     }
   }
 
-  const enabled = opts?.enabledKeys ?? ["coingecko", "defillama", "binance"];
-  const apiKeys = opts?.apiKeys ?? {};
+  // Read source config from DB if not explicitly provided.
+  // This makes the Sources UI toggles and API keys actually functional.
+  let enabled = opts?.enabledKeys;
+  let apiKeys = opts?.apiKeys;
+  if (!enabled || !apiKeys) {
+    try {
+      const { getSourceConfig } = await import("./source-config");
+      const config = await getSourceConfig();
+      enabled = enabled ?? config.enabledKeys;
+      apiKeys = apiKeys ?? config.apiKeys;
+    } catch {
+      // DB not available — use defaults.
+      enabled = enabled ?? ["coingecko", "defillama", "binance"];
+      apiKeys = apiKeys ?? {};
+    }
+  }
+
   const sourcesUsed: string[] = [];
 
   // ── 1) Fetch ALL market data from CoinGecko (250 coins) ──

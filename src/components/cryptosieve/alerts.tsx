@@ -130,26 +130,7 @@ export function AlertsManager() {
     load();
   }, [load]);
 
-  function createSampleAlerts() {
-    // Create sample triggered alerts for demo purposes.
-    triggerAlert({
-      ruleId: "demo",
-      symbol: "HYPE",
-      type: "thesis_change",
-      severity: "warn",
-      title: "HYPE thesis weakened",
-      message: "Thesis intact % dropped from 82% to 68% after revenue growth slowed.",
-    });
-    triggerAlert({
-      ruleId: "demo",
-      symbol: "AAVE",
-      type: "gate_breach",
-      severity: "critical",
-      title: "AAVE VAE gate breached",
-      message: "Value Accrual Efficiency dropped below 10% — universal gate triggered.",
-    });
-    toast.success("Sample alerts created");
-  }
+  // Note: Demo alerts button removed — only real alerts from monitoring are shown.
 
   return (
     <div className="space-y-4">
@@ -162,9 +143,6 @@ export function AlertsManager() {
           <p className="text-xs text-muted-foreground">Get notified when thesis changes, gates breach, or price targets hit.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={createSampleAlerts} className="gap-1.5 text-xs">
-            <Plus className="h-3.5 w-3.5" /> Demo alerts
-          </Button>
           <Button size="sm" onClick={() => setShowForm(!showForm)} className="gap-1.5 text-xs">
             <Plus className="h-3.5 w-3.5" /> New rule
           </Button>
