@@ -1,7 +1,6 @@
 // Price chart engine — fetches real OHLC data from Binance klines API.
 // Binance provides free, no-key, daily candles for any USDT pair.
-// Falls back to synthetic generation only when Binance has no data for the symbol.
-import type { ProjectInput } from "./types";
+// If Binance doesn't have the pair, no chart is shown (no synthetic fallback).
 import { fetchWithTimeout } from "@/lib/datasources/fetch-utils";
 
 export interface PricePoint {
@@ -32,7 +31,7 @@ export interface PriceSeries {
     maCross: "golden" | "death" | "none";
     momentum: number;
   };
-  real: boolean; // true if from live API, false if synthetic
+  real: boolean; // always true — only real data, no synthetic
 }
 
 // Fetch real daily klines from Binance for the given symbol.
@@ -55,36 +54,6 @@ export async function fetchRealPriceSeries(symbol: string): Promise<PriceSeries 
   } catch {
     return null;
   }
-}
-
-// Fallback: synthetic series (used when Binance doesn't have the pair).
-export function generatePriceSeries(input: ProjectInput): PriceSeries {
-  const seed = hashStr(input.symbol);
-  const rng = mulberry32(seed);
-  const startPrice = (input.priceUsd ?? 10) / (1 + (input.priceChange90d ?? 0) / 100);
-  const targetPrice = input.priceUsd ?? startPrice * 1.1;
-  const days = 90;
-
-  const prices: number[] = [];
-  let p = startPrice;
-  for (let i = 0; i < days; i++) {
-    const drift = (targetPrice - startPrice) / days;
-    const noise = (rng() - 0.5) * p * 0.04;
-    p = Math.max(0.01, p + drift + noise);
-    prices.push(p);
-  }
-  prices[days - 1] = input.priceUsd ?? prices[days - 1];
-
-  const volumes: number[] = prices.map(() => {
-    const base = (input.marketCap ?? 1e9) * 0.05;
-    return base * (0.5 + rng() * 0.5);
-  });
-  const dates: string[] = prices.map((_, i) => {
-    const now = Date.now();
-    return new Date(now - (days - 1 - i) * 86400000).toISOString();
-  });
-
-  return buildSeries(prices, volumes, dates, false);
 }
 
 // Build PriceSeries from raw price/volume/date arrays.
@@ -152,20 +121,5 @@ function buildSeries(prices: number[], volumes: number[], dates: string[], real:
     support, resistance, trend,
     indicators: { rsi: lastRsi, rsiSignal, maCross, momentum },
     real,
-  };
-}
-
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-function mulberry32(a: number) {
-  return function () {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }

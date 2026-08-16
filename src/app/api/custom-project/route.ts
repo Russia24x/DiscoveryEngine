@@ -103,10 +103,9 @@ export async function POST(req: Request) {
     const capitalFlow = buildCapitalFlowProfile(input);
     const catalyst = buildCatalystReport(input, scores, tokenomics);
     const evidence = buildEvidenceGraph(input, scores);
-    // Price chart: try real Binance klines, fall back to synthetic.
-  const { fetchRealPriceSeries, generatePriceSeries } = await import("@/lib/engine/price-chart");
-  const realPrice = await fetchRealPriceSeries(input.symbol);
-  const priceSeries = realPrice ?? generatePriceSeries(input);
+    // Price chart: real Binance klines only. No synthetic fallback.
+  const { fetchRealPriceSeries } = await import("@/lib/engine/price-chart");
+  const priceSeries = await fetchRealPriceSeries(input.symbol);
 
     // Rank against the bundle universe for peer percentiles.
     const { inputs: universeInputs } = await collectUniverse({ useLive: true });

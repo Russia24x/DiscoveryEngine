@@ -103,10 +103,9 @@ export async function GET(req: Request) {
     // v1.4: Catalyst report + kill conditions.
     const catalystReport = buildCatalystReport(input, scores, tokenomics);
 
-    // Price chart: try real Binance klines first, fall back to synthetic.
-    const { fetchRealPriceSeries, generatePriceSeries } = await import("@/lib/engine/price-chart");
-    const realPrice = await fetchRealPriceSeries(input.symbol);
-    const priceSeries = realPrice ?? generatePriceSeries(input);
+    // Price chart: real Binance klines only. No synthetic fallback.
+    const { fetchRealPriceSeries } = await import("@/lib/engine/price-chart");
+    const priceSeries = await fetchRealPriceSeries(input.symbol);
 
     return NextResponse.json({
       symbol,

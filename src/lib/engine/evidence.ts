@@ -61,36 +61,24 @@ export interface EvidenceGraph {
   };
 }
 
-// Historical score series (synthetic but deterministic from symbol + component).
-// In production these would be persisted per-scan. This gives a realistic trend shape.
+// Historical score series — returns empty arrays when no real persisted history exists.
+// Real history comes from HistoricalScore DB records (via /api/history).
+// This function is only used as a fallback shape for the evidence graph metrics.
 export function generateHistoricalScores(symbol: string, current: {
   pq: number | null; tq: number | null; va: number | null; v: number | null; r: number | null;
   iaRaw: number | null; iaEffective: number | null; iaFinal: number | null;
 }): { points: number[]; labels: string[] }[] {
-  const seed = hashStr(symbol);
-  const rng = mulberry32(seed);
-  const labels = ["90d", "60d", "30d", "14d", "7d", "now"];
-
-  function series(cur: number | null, volatility: number): number[] {
-    if (cur == null) return Array(6).fill(0);
-    const pts: number[] = [];
-    let v = cur * (0.7 + rng() * 0.3); // start lower
-    for (let i = 0; i < 5; i++) {
-      pts.push(Math.max(0, Math.min(100, v)));
-      v = v + (cur - v) * 0.35 + (rng() - 0.5) * volatility;
-    }
-    pts.push(cur);
-    return pts;
-  }
-
+  // Return single-point arrays (current value only) — no fabricated history.
+  const single = (cur: number | null): number[] => cur == null ? [] : [cur];
+  const labels = ["now"];
   return [
-    { points: series(current.pq, 8), labels },
-    { points: series(current.tq, 6), labels },
-    { points: series(current.va, 10), labels },
-    { points: series(current.v, 12), labels },
-    { points: series(current.iaRaw, 10), labels },
-    { points: series(current.iaEffective, 9), labels },
-    { points: series(current.iaFinal, 9), labels },
+    { points: single(current.pq), labels },
+    { points: single(current.tq), labels },
+    { points: single(current.va), labels },
+    { points: single(current.v), labels },
+    { points: single(current.iaRaw), labels },
+    { points: single(current.iaEffective), labels },
+    { points: single(current.iaFinal), labels },
   ];
 }
 
@@ -402,22 +390,4 @@ function fmtUsd(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
   return `${Math.round(n)}`;
-}
-
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
-function mulberry32(a: number) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
