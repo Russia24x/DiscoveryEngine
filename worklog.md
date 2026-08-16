@@ -721,3 +721,21 @@ Stage Summary:
 - Dead code removed.
 - 4 data sources active: CoinGecko, CMC, DeFiLlama, Binance.
 - 3209 projects discovered, 811 with live prices.
+
+---
+
+Task ID: 22
+Agent: main (remove all synthetic data — real API only)
+Task: Remove synthetic modules, disable auto-scan, real data only
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean.
+- Architecture change per user: Binance real-time, others on-demand (user click), no auto-refresh.
+- Deleted generatePriceSeries() from price-chart.ts (mulberry32 synthetic). Only fetchRealPriceSeries() remains — returns null if Binance has no pair.
+- Deleted synthetic historical generation from evidence.ts. generateHistoricalScores returns single-point (current value only). Real history from DB.
+- Deleted hashStr() and mulberry32() helpers from both files.
+- Removed auto-monitoring from Settings: replaced with Data Refresh Mode info card.
+- Removed monitoring status bar from app-shell.
+- project-detail + custom-project APIs: priceSeries = null when no Binance pair (no fallback).
+- Verified: BTC has real price chart, unknown symbols get null (no fake chart).
+- Lint clean (0 errors). Committed + pushed (1ea45c3). 151 lines deleted.
