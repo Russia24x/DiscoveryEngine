@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     const priceSeries = generatePriceSeries(input);
 
     // Rank against the bundle universe for peer percentiles.
-    const { inputs: universeInputs } = await collectUniverse({ useLive: false });
+    const { inputs: universeInputs } = await collectUniverse({ useLive: true });
     const allInputs = [...universeInputs, input];
     const ranked = rankUniverse(allInputs, M);
     const percentiles = benchmarkUniverse(ranked);

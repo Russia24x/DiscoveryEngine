@@ -72,6 +72,7 @@ export function CatalystView({ report }: { report: CatalystReport }) {
               <CalendarDays className="h-4 w-4 text-primary" />
               {t.catalyst.upcoming}
               <Badge variant="outline" className="text-[10px]">{report.catalysts.length}</Badge>
+              <span className="text-[9px] text-muted-foreground/60 font-normal">(projected)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

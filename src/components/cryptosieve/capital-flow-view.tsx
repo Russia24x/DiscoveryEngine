@@ -47,8 +47,11 @@ export function CapitalFlowView({ profile }: { profile: CapitalFlowProfile }) {
           <CardTitle className="relative text-sm flex items-center gap-2">
             <Waves className="h-4 w-4 text-primary" />
             {t.capitalFlow.title}
+            <span className="text-[9px] text-muted-foreground/60 font-normal">(synthetic proxy)</span>
           </CardTitle>
-          <p className="relative text-[11px] text-muted-foreground">{t.capitalFlow.subtitle}</p>
+          <p className="relative text-[11px] text-muted-foreground">
+            {t.capitalFlow.subtitle} — <span className="text-muted-foreground/60">estimates from market data, not on-chain</span>
+          </p>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

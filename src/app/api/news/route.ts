@@ -1,16 +1,43 @@
 // /api/news — manage news & social feeds (RSS / Telegram / X ready).
+// Mirror mode: feeds are managed in DB, but items are fetched live from source.
+// No items are persisted — we only display content from the original source.
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { classifySentiment, fetchRss } from "@/lib/datasources/rss";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const sources = await db.newsSource.findMany({
-      include: { items: { orderBy: { publishedAt: "desc" }, take: 10 } },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ sources });
+
+    // Fetch items live from each enabled RSS source (mirror mode — no DB storage).
+    const sourcesWithItems = await Promise.all(
+      sources.map(async (src) => {
+        if (!src.enabled || src.type !== "rss") {
+          return { ...src, items: [] };
+        }
+        try {
+          const items = await fetchRss(src.url, 5000);
+          return {
+            ...src,
+            items: items.slice(0, 10).map((it) => ({
+              title: it.title,
+              url: it.url,
+              summary: it.summary,
+              publishedAt: it.publishedAt.toISOString(),
+              sentiment: classifySentiment(`${it.title} ${it.summary ?? ""}`),
+            })),
+          };
+        } catch {
+          return { ...src, items: [], error: "fetch failed" };
+        }
+      })
+    );
+
+    return NextResponse.json({ sources: sourcesWithItems });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }

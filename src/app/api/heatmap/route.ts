@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { inputs } = await collectUniverse({ useLive: false });
+    const { inputs } = await collectUniverse({ useLive: true });
     const med = median(inputs.map((i) => (i as any).priceChange90d ?? 0)) || 0;
     const M = 1 + med / 400;
     const ranked = rankUniverse(inputs, M);
