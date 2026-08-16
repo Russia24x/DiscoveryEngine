@@ -160,7 +160,30 @@ export async function collectUniverse(opts?: {
       }
     }
 
-    // ── 3) Try key-based adapters (CMC, Messari) if API keys provided ──
+    // ── 3) Fetch live prices from Binance (generous rate limits) ──
+    if (enabled.includes("binance")) {
+      const bn = getAdapter("binance");
+      if (bn) {
+        const bnRows = await bn.fetchMarketData(undefined, apiKeys.binance);
+        if (bnRows.length > 0) {
+          // Enrich: if CoinGecko didn't provide price for a symbol, use Binance.
+          for (const r of bnRows) {
+            if (!marketBySymbol.has(r.symbol)) {
+              marketBySymbol.set(r.symbol, r);
+            } else {
+              // If CoinGecko had it but no price, use Binance price.
+              const existing = marketBySymbol.get(r.symbol)!;
+              if (existing.priceUsd == null && r.priceUsd != null) {
+                existing.priceUsd = r.priceUsd;
+              }
+            }
+          }
+          sourcesUsed.push("binance");
+        }
+      }
+    }
+
+    // ── 4) Try key-based adapters (CMC, Messari) if API keys provided ──
     for (const adapterKey of ["cmc", "messari"]) {
       const adapter = getAdapter(adapterKey);
       const key = apiKeys[adapterKey];
