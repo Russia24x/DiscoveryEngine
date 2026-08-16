@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useI18n } from "@/i18n/provider";
 import { useApp } from "@/lib/store";
+import { useAlerts } from "@/lib/alerts-store";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,8 @@ type SortKey = "fundamental" | "confidence" | "effective" | "market";
 export function ScannerView() {
   const { t } = useI18n();
   const { scanResults, scanMeta, scanning, setScanning, setScanResults, setScanMeta, openProject } = useApp();
+  const { rules, triggerAlert } = useAlerts();
+  const prevResultsRef = useRef<Map<string, any>>(new Map());
   const [sort, setSort] = useState<SortKey>("market");
   const [q, setQ] = useState("");
   const [onlyPassed, setOnlyPassed] = useState(false);
@@ -39,7 +43,8 @@ export function ScannerView() {
         body: JSON.stringify({ useLive: true }),
       });
       const j = await res.json();
-      setScanResults(j.results ?? []);
+      const results = j.results ?? [];
+      setScanResults(results);
       setScanMeta({
         live: j.live,
         sourcesUsed: j.sourcesUsed,
@@ -49,6 +54,95 @@ export function ScannerView() {
         rejected: j.rejected,
         investigate: j.investigate,
       });
+
+      // Check alert triggers by comparing with previous scan results.
+      const prevMap = prevResultsRef.current;
+      const newMap = new Map(results.map((r: any) => [r.symbol, r]));
+      let alertsTriggered = 0;
+
+      for (const rule of rules) {
+        if (!rule.enabled) continue;
+        const prev = prevMap.get(rule.symbol);
+        const curr = newMap.get(rule.symbol);
+        if (!curr) continue;
+
+        // Only trigger if we have previous data to compare against.
+        if (!prev) continue;
+
+        if (rule.type === "score_threshold" && rule.threshold != null) {
+          const prevIa = prev.iaFinal;
+          const currIa = curr.iaFinal;
+          if (prevIa != null && currIa != null && prevIa >= rule.threshold && currIa < rule.threshold) {
+            triggerAlert({
+              ruleId: rule.id, symbol: rule.symbol, type: "score_threshold",
+              severity: rule.severity,
+              title: `${rule.symbol} IA dropped below ${rule.threshold}`,
+              message: `IA Final: ${prevIa.toFixed(1)} → ${currIa.toFixed(1)}`,
+            });
+            alertsTriggered++;
+          }
+        }
+
+        if (rule.type === "price_target" && rule.threshold != null) {
+          const prevPrice = prev.priceUsd;
+          const currPrice = curr.priceUsd;
+          if (prevPrice != null && currPrice != null) {
+            const target = rule.threshold;
+            if ((prevPrice < target && currPrice >= target) || (prevPrice >= target && currPrice < target)) {
+              triggerAlert({
+                ruleId: rule.id, symbol: rule.symbol, type: "price_target",
+                severity: rule.severity,
+                title: `${rule.symbol} hit price target $${target}`,
+                message: `Price: $${prevPrice.toFixed(2)} → $${currPrice.toFixed(2)}`,
+              });
+              alertsTriggered++;
+            }
+          }
+        }
+
+        if (rule.type === "decision_change") {
+          if (prev.decision && curr.decision && prev.decision !== curr.decision) {
+            triggerAlert({
+              ruleId: rule.id, symbol: rule.symbol, type: "decision_change",
+              severity: rule.severity,
+              title: `${rule.symbol}: ${prev.decision} → ${curr.decision}`,
+              message: `Decision changed from ${prev.decision} to ${curr.decision}.`,
+            });
+            alertsTriggered++;
+          }
+        }
+
+        if (rule.type === "gate_breach") {
+          if (prev.gatePassed === true && curr.gatePassed === false) {
+            triggerAlert({
+              ruleId: rule.id, symbol: rule.symbol, type: "gate_breach",
+              severity: "critical",
+              title: `${rule.symbol} gate breached`,
+              message: `Gate check failed. Previous: PASS, now: FAIL.`,
+            });
+            alertsTriggered++;
+          }
+        }
+
+        if (rule.type === "thesis_change") {
+          const prevThesis = prev.thesis?.status;
+          const currThesis = curr.thesis?.status;
+          if (prevThesis && currThesis && prevThesis !== currThesis) {
+            triggerAlert({
+              ruleId: rule.id, symbol: rule.symbol, type: "thesis_change",
+              severity: rule.severity,
+              title: `${rule.symbol} thesis: ${prevThesis} → ${currThesis}`,
+              message: `Thesis status changed.`,
+            });
+            alertsTriggered++;
+          }
+        }
+      }
+
+      prevResultsRef.current = newMap;
+      if (alertsTriggered > 0) {
+        toast.success(`${alertsTriggered} alert(s) triggered`);
+      }
     } finally {
       setScanning(false);
     }
