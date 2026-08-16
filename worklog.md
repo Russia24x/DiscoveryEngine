@@ -629,3 +629,33 @@ Priority Next:
 - Add automated tests for engine formulas
 - Consider migrating from SQLite to PostgreSQL for production
 - Add more visual polish and animations
+
+---
+
+Task ID: 19
+Agent: main (Phase 1 — Discovery Engine)
+Task: Metric-driven discovery, Binance integration, gate logic fix
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean, up-to-date with origin/main.
+- Rewrote DeFiLlama adapter for new API structure (total24h, annualized1y instead of fees_24h, revenue_24h). Returns ALL protocols with annualized fees > 0 (not filtered by bundle).
+- Updated CoinGecko adapter: per_page=250, retry on 429 with backoff, 300s cache, 8s timeout.
+- Wired Binance adapter in collectUniverse: fetches all USDT pairs for live prices. Binance has generous rate limits — fills the gap when CoinGecko is rate-limited.
+- Rewrote collectUniverse: metric-driven discovery (CoinGecko + DeFiLlama + Binance merge by symbol). Bundle is ONLY used as fallback when all APIs fail.
+- Rewrote toProjectInput: 17 hardcoded constants replaced with derived heuristics:
+  - IC from float/total supply ratio
+  - ML from market cap tier
+  - SC from chain (Ethereum=30, Solana=35, etc.)
+  - DR/REG from sector
+  - MP from TVL
+  - RC from revenue/TVL ratio
+- Gate logic fix: VAE/δ = null (unknown) no longer auto-rejects. Projects with unknown VAE pass gates with lower confidence.
+- Verified: 3077 projects discovered, 671 with live Binance prices, risk scores vary (R=38-45), diverse sectors.
+- Lint clean (0 errors). Committed + pushed (0c60372, 65c3781).
+
+Stage Summary:
+- Discovery Engine is functional: 3077 projects (was 22).
+- Live prices from Binance (671 projects with price data).
+- Risk scores vary per project (was constant 49.75).
+- VAE = null (unknown) for all projects — tokenholder revenue data not available from free DeFiLlama endpoint.
+- CoinGecko rate-limited (429) — Binance fills the gap.
