@@ -659,3 +659,37 @@ Stage Summary:
 - Risk scores vary per project (was constant 49.75).
 - VAE = null (unknown) for all projects — tokenholder revenue data not available from free DeFiLlama endpoint.
 - CoinGecko rate-limited (429) — Binance fills the gap.
+
+---
+
+Task ID: 20
+Agent: main (Phase 1 continued — CMC + news mirror + synthetic labels)
+Task: CMC keyless adapter, news mirror mode, synthetic labels, Compare/Heatmap useLive
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean.
+- Added CoinMarketCap keyless API adapter (cmc-free.ts):
+  - Uses public web API (no key required).
+  - Fetches top 200 coins by market cap.
+  - Returns: price, mcap, FDV, supply, 90d change, tags, audit info.
+  - No rate limit issues (unlike CoinGecko).
+  - Renamed old CMC Pro stub from 'cmc' to 'cmc-pro'.
+- collectUniverse now uses 4 data sources: CoinGecko + CMC + DeFiLlama + Binance.
+  Verified: 3210 projects, 4 sources, 811 with live prices, 287 with market cap.
+- News mirror mode:
+  - /api/news GET: fetches RSS live from source, no DB storage.
+  - /api/news/sync POST: returns items directly, no persistence.
+  - Content belongs to original source — we only display.
+- Synthetic labels (honest UX):
+  - Capital Flow: '(synthetic proxy)' + 'estimates from market data, not on-chain'
+  - Price Chart: '(synthetic)'
+  - Catalyst Calendar: '(projected)'
+- Compare/Heatmap/Custom: useLive:true (was false → stale bundle prices).
+- Lint clean (0 errors). Committed + pushed (b0814ab, bf73188).
+
+Stage Summary:
+- 4 data sources active: CoinGecko, CMC, DeFiLlama, Binance.
+- 3210 projects discovered (from 22).
+- News is mirror-only (no storage).
+- Synthetic modules are honestly labeled.
+- Compare/Heatmap show live data.
