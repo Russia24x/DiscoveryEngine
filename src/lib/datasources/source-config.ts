@@ -9,7 +9,7 @@ export interface SourceConfig {
 }
 
 // Free adapters are always enabled unless explicitly disabled.
-const FREE_DEFAULTS = ["coingecko", "defillama", "binance"];
+const FREE_DEFAULTS = ["coingecko", "defillama", "binance", "cmc"];
 
 export async function getSourceConfig(): Promise<SourceConfig> {
   try {

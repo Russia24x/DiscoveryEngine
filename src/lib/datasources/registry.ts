@@ -3,22 +3,24 @@
 import { binance } from "./binance";
 import { coingecko } from "./coingecko";
 import { defillama } from "./defillama";
+import { cmcFree } from "./cmc-free";
 import { getBundleUniverse } from "./bundle";
 import { toProjectInput, type DataSourceAdapter, type FundamentalsRow, type MarketDataRow } from "./types";
 
-// All known adapters (free + future key-based stubs).
+// All known adapters.
 export const ADAPTERS: DataSourceAdapter[] = [
   coingecko,
   defillama,
   binance,
-  // ── Key-based adapters (functional when API key is provided) ──
+  cmcFree,
+  // ── Key-based Pro adapters (functional when API key is provided) ──
   {
-    key: "cmc",
-    name: "CoinMarketCap",
+    key: "cmc-pro",
+    name: "CoinMarketCap Pro",
     type: "apikey",
     requiresKey: true,
     endpoint: "https://pro-api.coinmarketcap.com/v1",
-    coverage: "Market data, listings",
+    coverage: "Market data, listings (Pro API — requires paid key)",
     async fetchMarketData(_symbols?: string[], apiKey?: string) {
       if (!apiKey) return [];
       try {
@@ -164,7 +166,32 @@ export async function collectUniverse(opts?: {
       }
     }
 
-    // ── 2) Fetch ALL fundamentals from DeFiLlama (hundreds of protocols) ──
+    // ── 2) Fetch market data from CoinMarketCap keyless (no rate limit issues) ──
+    // CMC provides price, mcap, FDV, supply, 90d change, tags — richer than Binance.
+    const cmc = getAdapter("cmc");
+    if (cmc && enabled.includes("cmc")) {
+      const cmcRows = await cmc.fetchMarketData(undefined, apiKeys.cmc);
+      if (cmcRows.length > 0) {
+        // Enrich: fill in symbols that CoinGecko missed or was rate-limited on.
+        for (const r of cmcRows) {
+          if (!marketBySymbol.has(r.symbol)) {
+            marketBySymbol.set(r.symbol, r);
+          } else {
+            // If CoinGecko had it but missing fields, fill from CMC.
+            const existing = marketBySymbol.get(r.symbol)!;
+            if (existing.marketCap == null && r.marketCap != null) existing.marketCap = r.marketCap;
+            if (existing.fdv == null && r.fdv != null) existing.fdv = r.fdv;
+            if (existing.totalSupply == null && r.totalSupply != null) existing.totalSupply = r.totalSupply;
+            if (existing.floatSupply == null && r.floatSupply != null) existing.floatSupply = r.floatSupply;
+            if (existing.priceChange90d == null && r.priceChange90d != null) existing.priceChange90d = r.priceChange90d;
+            if (existing.sector == null && r.sector != null) existing.sector = r.sector;
+          }
+        }
+        sourcesUsed.push("cmc");
+      }
+    }
+
+    // ── 3) Fetch ALL fundamentals from DeFiLlama (hundreds of protocols) ──
     let fundamentalsBySymbol = new Map<string, FundamentalsRow>();
     const dl = getAdapter("defillama");
     if (dl && enabled.includes("defillama")) {
