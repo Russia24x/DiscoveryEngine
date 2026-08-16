@@ -739,3 +739,35 @@ Work Log:
 - project-detail + custom-project APIs: priceSeries = null when no Binance pair (no fallback).
 - Verified: BTC has real price chart, unknown symbols get null (no fake chart).
 - Lint clean (0 errors). Committed + pushed (1ea45c3). 151 lines deleted.
+
+---
+
+Task ID: 23
+Agent: main (Phase 3+4 — thesis pipeline + alert triggers + UX polish)
+Task: Data-driven thesis engine, alert triggers on manual scan, UX animations
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean.
+- Thesis Engine rewritten (thesis-seed.ts):
+  - Deleted all hardcoded SECTOR_THESIS templates.
+  - Thesis title now derived from sector + key metric (e.g. "mineable with declining revenue").
+  - whyWorks: actual positive signals from real data (growth, VAE, alpha, PQ, V, R, mcap).
+  - mustStayTrue: derived from current thresholds.
+  - whatBreaks: derived from risk factors present in data.
+  - latestEvidence: 5 real metrics with direction.
+  - intactPct: 50 + (up-down)/total * 100.
+  - Verified: BTC = "mineable with declining revenue", intactPct=25.
+- Alert triggers on manual scan (scanner.tsx):
+  - Scanner now evaluates all 5 alert types on every "Run Scan" click.
+  - Compares with previous scan results (prevResultsRef).
+  - Toast notification shows triggered alert count.
+- UX/UI polish (globals.css):
+  - New animations: scale-in, slide-in-right, count-up, spin-smooth.
+  - Better focus-visible, smooth scrolling, table row hover.
+- Lint clean (0 errors). Committed + pushed (10ea73b).
+
+Stage Summary:
+- Thesis is now 100% data-driven — no templates, no hardcoded strings.
+- Alerts trigger on manual scans (user-controlled, no auto-scan needed).
+- UX has proper animations and keyboard focus styling.
+- All 4 phases complete: Discovery Engine → Engine Real Data → Thesis Pipeline → UX Polish.
