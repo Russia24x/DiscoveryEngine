@@ -693,3 +693,31 @@ Stage Summary:
 - News is mirror-only (no storage).
 - Synthetic modules are honestly labeled.
 - Compare/Heatmap show live data.
+
+---
+
+Task ID: 21
+Agent: main (engineering improvements — real price chart + alerts + cleanup)
+Task: Real Binance klines price chart, price_target alerts, dead route cleanup
+
+Work Log:
+- SESSION-START-SYNC-CHECK: git fetch + status — clean.
+- Real price chart via Binance klines:
+  - New fetchRealPriceSeries() in price-chart.ts: fetches 90 daily OHLC candles from Binance /api/v3/klines.
+  - project-detail API: tries real Binance data first, falls back to synthetic.
+  - custom-project API: same logic.
+  - PriceChartView: shows '(live Binance)' in green when real, '(synthetic)' in muted when fallback.
+  - Verified: BTC shows real 90-point data ($63,083, RSI=44.2, trend=bearish, -17.9% 90d change).
+- price_target alert implemented:
+  - Fires when price crosses the target threshold (either direction).
+  - All 5 alert types now functional: score_threshold, price_target, decision_change, gate_breach, thesis_change.
+- Removed dead /api/ root route (was returning 'Hello, world!').
+- Verified: 3209 projects, 4 sources active, 811 with live prices, BTC real price chart works.
+- Lint clean (0 errors). Committed + pushed (b335480).
+
+Stage Summary:
+- Price chart is now REAL (Binance klines) for any USDT-traded pair.
+- All 5 alert types are functional.
+- Dead code removed.
+- 4 data sources active: CoinGecko, CMC, DeFiLlama, Binance.
+- 3209 projects discovered, 811 with live prices.
