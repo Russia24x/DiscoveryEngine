@@ -83,6 +83,27 @@ export function useMonitoring() {
           }
         }
 
+        if (rule.type === "price_target" && rule.threshold != null) {
+          const prevPrice = prev?.priceUsd;
+          const currPrice = curr?.priceUsd;
+          if (prevPrice != null && currPrice != null) {
+            // Alert when price crosses the target (either direction).
+            const target = rule.threshold;
+            const crossedUp = prevPrice < target && currPrice >= target;
+            const crossedDown = prevPrice >= target && currPrice < target;
+            if (crossedUp || crossedDown) {
+              triggerAlert({
+                ruleId: rule.id,
+                symbol: rule.symbol,
+                type: "price_target",
+                severity: rule.severity,
+                title: `${rule.symbol} hit price target $${target}`,
+                message: `Price ${crossedUp ? "rose to" : "dropped to"} $${currPrice.toFixed(2)} (target: $${target}). Previous: $${prevPrice.toFixed(2)}.`,
+              });
+            }
+          }
+        }
+
         if (rule.type === "decision_change") {
           const prevDec = prev?.decision;
           const currDec = curr.decision;

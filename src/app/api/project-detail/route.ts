@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { collectUniverse } from "@/lib/datasources/registry";
-import { benchmarkUniverse, buildCatalystReport, buildCapitalFlowProfile, buildEvidenceGraph, buildTokenomicsSchedule, generateHistoricalScores, generatePriceSeries, rankUniverse, scoreProject } from "@/lib/engine";
+import { benchmarkUniverse, buildCatalystReport, buildCapitalFlowProfile, buildEvidenceGraph, buildTokenomicsSchedule, generateHistoricalScores, rankUniverse, scoreProject } from "@/lib/engine";
 import { generateDefaultThesis } from "@/lib/engine/thesis-seed";
 
 export const dynamic = "force-dynamic";
@@ -103,8 +103,10 @@ export async function GET(req: Request) {
     // v1.4: Catalyst report + kill conditions.
     const catalystReport = buildCatalystReport(input, scores, tokenomics);
 
-    // Price chart series with technical indicators (90d).
-    const priceSeries = generatePriceSeries(input);
+    // Price chart: try real Binance klines first, fall back to synthetic.
+    const { fetchRealPriceSeries, generatePriceSeries } = await import("@/lib/engine/price-chart");
+    const realPrice = await fetchRealPriceSeries(input.symbol);
+    const priceSeries = realPrice ?? generatePriceSeries(input);
 
     return NextResponse.json({
       symbol,

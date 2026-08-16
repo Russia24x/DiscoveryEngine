@@ -1,18 +1,18 @@
-// Price chart engine — generates deterministic OHLC + volume + technical indicators.
-// In production these would come from a live price API (CoinGecko /charts endpoint).
-// Here we synthesize a realistic 90-day series seeded by the symbol so the chart
-// is stable per project and reflects the priceChange90d signal.
+// Price chart engine — fetches real OHLC data from Binance klines API.
+// Binance provides free, no-key, daily candles for any USDT pair.
+// Falls back to synthetic generation only when Binance has no data for the symbol.
 import type { ProjectInput } from "./types";
+import { fetchWithTimeout } from "@/lib/datasources/fetch-utils";
 
 export interface PricePoint {
-  t: number; // timestamp (day index 0..89)
-  date: string; // ISO date
+  t: number;
+  date: string;
   price: number;
   volume: number;
-  ma7: number; // 7-day moving average
-  ma30: number; // 30-day moving average
-  rsi: number; // 14-day RSI
-  change: number; // % change from previous day
+  ma7: number;
+  ma30: number;
+  rsi: number;
+  change: number;
 }
 
 export interface PriceSeries {
@@ -32,8 +32,32 @@ export interface PriceSeries {
     maCross: "golden" | "death" | "none";
     momentum: number;
   };
+  real: boolean; // true if from live API, false if synthetic
 }
 
+// Fetch real daily klines from Binance for the given symbol.
+// Returns null if Binance doesn't have the pair.
+export async function fetchRealPriceSeries(symbol: string): Promise<PriceSeries | null> {
+  try {
+    const pair = `${symbol.toUpperCase()}USDT`;
+    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1d&limit=90`;
+    const res = await fetchWithTimeout(url, { next: { revalidate: 300 } }, 8000);
+    if (!res.ok) return null;
+    const raw = (await res.json()) as any[];
+    if (!Array.isArray(raw) || raw.length < 14) return null;
+
+    // Binance kline format: [openTime, open, high, low, close, volume, closeTime, ...]
+    const prices: number[] = raw.map((k) => parseFloat(k[4])); // close price
+    const volumes: number[] = raw.map((k) => parseFloat(k[5]));
+    const dates: string[] = raw.map((k) => new Date(parseInt(k[0])).toISOString());
+
+    return buildSeries(prices, volumes, dates, true);
+  } catch {
+    return null;
+  }
+}
+
+// Fallback: synthetic series (used when Binance doesn't have the pair).
 export function generatePriceSeries(input: ProjectInput): PriceSeries {
   const seed = hashStr(input.symbol);
   const rng = mulberry32(seed);
@@ -41,27 +65,30 @@ export function generatePriceSeries(input: ProjectInput): PriceSeries {
   const targetPrice = input.priceUsd ?? startPrice * 1.1;
   const days = 90;
 
-  // Generate daily prices with a random-walk biased toward the target.
   const prices: number[] = [];
   let p = startPrice;
   for (let i = 0; i < days; i++) {
-    const progress = i / (days - 1);
     const drift = (targetPrice - startPrice) / days;
-    const noise = (rng() - 0.5) * p * 0.04; // 4% daily volatility
+    const noise = (rng() - 0.5) * p * 0.04;
     p = Math.max(0.01, p + drift + noise);
     prices.push(p);
   }
-  // Ensure last point equals current price
   prices[days - 1] = input.priceUsd ?? prices[days - 1];
 
-  // Volume — synthetic, higher on big move days
-  const volumes: number[] = prices.map((_, i) => {
+  const volumes: number[] = prices.map(() => {
     const base = (input.marketCap ?? 1e9) * 0.05;
-    const change = i > 0 ? Math.abs(prices[i] - prices[i - 1]) / prices[i - 1] : 0;
-    return base * (0.5 + rng() * 0.5 + change * 8);
+    return base * (0.5 + rng() * 0.5);
+  });
+  const dates: string[] = prices.map((_, i) => {
+    const now = Date.now();
+    return new Date(now - (days - 1 - i) * 86400000).toISOString();
   });
 
-  // Moving averages
+  return buildSeries(prices, volumes, dates, false);
+}
+
+// Build PriceSeries from raw price/volume/date arrays.
+function buildSeries(prices: number[], volumes: number[], dates: string[], real: boolean): PriceSeries {
   function ma(arr: number[], period: number, idx: number): number {
     if (idx < period - 1) return arr[idx];
     let sum = 0;
@@ -69,27 +96,21 @@ export function generatePriceSeries(input: ProjectInput): PriceSeries {
     return sum / period;
   }
 
-  // RSI (14-day)
   function rsi(arr: number[], idx: number): number {
     if (idx < 14) return 50;
-    let gains = 0;
-    let losses = 0;
+    let gains = 0, losses = 0;
     for (let i = idx - 13; i <= idx; i++) {
       const diff = arr[i] - arr[i - 1];
       if (diff >= 0) gains += diff;
       else losses -= diff;
     }
-    const avgGain = gains / 14;
-    const avgLoss = losses / 14;
-    if (avgLoss === 0) return 100;
-    const rs = avgGain / avgLoss;
-    return 100 - 100 / (1 + rs);
+    if (losses === 0) return 100;
+    return 100 - 100 / (1 + gains / losses);
   }
 
-  const now = Date.now();
   const points: PricePoint[] = prices.map((price, i) => ({
     t: i,
-    date: new Date(now - (days - 1 - i) * 86400000).toISOString(),
+    date: dates[i],
     price,
     volume: volumes[i],
     ma7: ma(prices, 7, i),
@@ -106,9 +127,8 @@ export function generatePriceSeries(input: ProjectInput): PriceSeries {
   const returns = prices.slice(1).map((v, i) => (v - prices[i]) / prices[i]);
   const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
   const variance = returns.reduce((a, b) => a + (b - meanReturn) ** 2, 0) / returns.length;
-  const volatility = Math.sqrt(variance) * Math.sqrt(365) * 100; // annualized %
+  const volatility = Math.sqrt(variance) * Math.sqrt(365) * 100;
 
-  // Support/resistance from recent 30 days
   const recent = prices.slice(-30);
   const support = Math.min(...recent);
   const resistance = Math.max(...recent);
@@ -128,21 +148,13 @@ export function generatePriceSeries(input: ProjectInput): PriceSeries {
   const momentum = ((current - prices[Math.max(0, prices.length - 10)]) / prices[Math.max(0, prices.length - 10)]) * 100;
 
   return {
-    points,
-    current,
-    high90,
-    low90,
-    avgVolume,
-    totalChange90d,
-    volatility,
-    support,
-    resistance,
-    trend,
+    points, current, high90, low90, avgVolume, totalChange90d, volatility,
+    support, resistance, trend,
     indicators: { rsi: lastRsi, rsiSignal, maCross, momentum },
+    real,
   };
 }
 
-// ── Helpers ──
 function hashStr(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
@@ -151,8 +163,7 @@ function hashStr(s: string): number {
 
 function mulberry32(a: number) {
   return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;

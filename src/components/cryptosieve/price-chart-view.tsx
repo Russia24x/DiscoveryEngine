@@ -50,7 +50,9 @@ export function PriceChartView({ series }: { series: PriceSeries }) {
           <CardTitle className="text-sm flex items-center gap-2">
             <CandlestickChart className="h-4 w-4 text-primary" />
             Price & Technicals
-            <span className="text-[9px] text-muted-foreground/60 font-normal">(synthetic)</span>
+            <span className={`text-[9px] font-normal ${series.real ? "text-pass" : "text-muted-foreground/60"}`}>
+              {series.real ? "(live Binance)" : "(synthetic)"}
+            </span>
             <span className="text-[10px] text-muted-foreground font-normal">90d</span>
           </CardTitle>
           <div className="flex items-center gap-1.5">
